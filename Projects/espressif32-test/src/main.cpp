@@ -3,7 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "my_code.h"
-#include <Ticker.h>
+
 
 #include <WiFi.h>
 #include <NTPClient.h>
@@ -29,7 +29,7 @@ const int myTestPin = GPIO_NUM_14;
 #define TOUCH_PIN GPIO_NUM_13
 
 int loopCounter = 0;
-Ticker ticker;
+
 
 void periodicTask() {
     Serial.println("Ticker triggered!");
@@ -85,7 +85,7 @@ void setup()
   delay(1000);
 
   xTaskCreate(backgroundTask, "Background Task", 2048, &display, 1, NULL);
-  ticker.attach(1.0, periodicTask);  // 1.0 = 1 second
+  
 }
 
 int row = 0;
