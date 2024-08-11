@@ -1,0 +1,187 @@
+#include <Arduino.h>
+
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#endif
+
+#include "U8glib.h"
+
+// #include <ESPAsyncWebServer.h>
+// #include <WebSerial.h>
+#include <WebSerialLite.h>
+
+AsyncWebServer server(80);
+
+const char *ssid = "DarkNet";        // Your WiFi SSID
+const char *password = "7pu77ies77"; // Your WiFi Password
+
+unsigned long last_print_time = millis();
+
+template <typename T>
+void _print(const T &value)
+{
+  WebSerial.print(value);
+  Serial.print(value);
+}
+
+// Overloads for different argument types
+template <typename T, typename U>
+void _print(const T &value, const U &format)
+{
+  WebSerial.print(value, format);
+  Serial.print(value, format);
+}
+
+// Wrapper functions to handle Serial.println and redirect to WebSerial.println
+template <typename T>
+void _println(const T &value)
+{
+  WebSerial.println(value);
+  Serial.println(value);
+}
+
+template <typename T, typename U>
+void _println(const T &value, const U &format)
+{
+  WebSerial.println(value, format);
+  Serial.println(value, format);
+}
+
+// Wrapper function to handle Serial.printf and redirect to WebSerial.printf
+void _printf(const char *format, ...)
+{
+  char buffer[256]; // Adjust the buffer size as needed
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  WebSerial.print(buffer);
+  Serial.print(buffer);
+}
+
+/* Message callback of WebSerial */
+void recvMsg(uint8_t *data, size_t len)
+{
+  Serial.println("Received Data...");
+  WebSerial.println("Received Data...");
+  String d = "";
+  for (int i = 0; i < len; i++)
+  {
+    d += char(data[i]);
+  }
+  WebSerial.println(d);
+}
+
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0 | U8G_I2C_OPT_NO_ACK | U8G_I2C_OPT_FAST); // Fast I2C / TWI
+
+int progress = 0;
+
+void setup()
+{
+  Serial.begin(230400);
+
+  while (!Serial)
+    continue;
+
+
+  u8g.setFont(u8g_font_tpssb);
+  u8g.setColorIndex(1);
+  return;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (!WiFi.isConnected())
+  {
+    delay(500);
+    Serial.print(".");
+  }
+
+  // if (WiFi.waitForConnectResult() != WL_CONNECTED)
+  // {
+  //   Serial.printf("WiFi Failed!\n");
+  //   return;
+  // }
+
+  // Once connected, print IP
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           { request->send(200, "text/plain", "Hi! This is WebSerial demo. You can access webserial interface at http://" + WiFi.localIP().toString() + "/webserial"); });
+
+  // // WebSerial is accessible at "<IP Address>/webserial" in browser
+  // WebSerial.begin(&server);
+
+  // /* Attach Message Callback */
+  // WebSerial.onMessage([&](uint8_t *data, size_t len)
+  //                     {
+  //   Serial.printf("Received %u bytes from WebSerial: ", len);
+  //   Serial.write(data, len);
+  //   Serial.println();
+  //   WebSerial.println("Received Data...");
+  //   String d = "";
+  //   for(size_t i=0; i < len; i++){
+  //     d += char(data[i]);
+  //   }
+  //   WebSerial.println(d); });
+
+  // // Start server
+  // server.begin();
+
+  WebSerial.begin(&server);
+  /* Attach Message Callback */
+  WebSerial.onMessage(recvMsg);
+  server.begin();
+}
+
+
+void oledLoop() {
+  u8g.firstPage();
+  do {
+    u8g.drawStr(25, 50, "Progress Bar");
+    u8g.drawFrame(0, 10, 128, 20);
+    u8g.drawBox(10, 15, progress, 10);
+  } while ( u8g.nextPage() );
+
+  if (progress < 108) {
+    progress++;
+  } else {
+    progress = 0;
+  }
+}
+
+void loop()
+{
+
+  oledLoop();
+  return;
+
+
+  delay(2000);
+  // Serial.println(WiFi.localIP());
+  // WebSerial.println(WiFi.localIP().toString());
+  // WebSerial.printf("Millis=%lu\n", millis());
+  
+  _printf("Millis=%lu\n", millis());
+
+  // WebSerial.printf("Free heap=[%u]\n", ESP.getFreeHeap());
+
+  // Serial.print(".");
+
+  // // Print every 2 seconds (non-blocking)
+  // if ((unsigned long)(millis() - last_print_time) > 2000)
+  // {
+  //   WebSerial.print(F("IP address: "));
+  //   WebSerial.println(WiFi.localIP());
+  //   WebSerial.printf("Uptime: %lums\n", millis());
+  //   WebSerial.printf("Free heap: %" PRIu32 "\n", ESP.getFreeHeap());
+  //   last_print_time = millis();
+  // }
+
+  // WebSerial.loop();
+}
