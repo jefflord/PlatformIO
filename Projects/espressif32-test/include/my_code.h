@@ -8,6 +8,8 @@ void handleBackgroundTask(Adafruit_SSD1306 &display);
 
 void backgroundTask(void *pvParameters);
 
+void showVersion(void *pvParameters);
+
 class ProgressBarFPS
 {
 public:
