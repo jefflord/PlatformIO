@@ -67,7 +67,7 @@ const byte PROGMEM frames[][128] = {
 void setup()
 {
 
-  Serial.begin(230400);
+  Serial.begin(115200);
 
   while (!Serial)
     continue;
