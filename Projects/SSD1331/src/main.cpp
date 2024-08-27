@@ -45,7 +45,7 @@ void setup()
   Serial.print(" at ");
   Serial.println(__TIME__);
 
-  int duty = 255 * 0.687;
+  int duty = 255 * 0.666;
   duty = 32767 * 0.27;
 
   Serial.println();

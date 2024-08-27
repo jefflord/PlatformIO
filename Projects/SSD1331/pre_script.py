@@ -6,7 +6,7 @@ env = DefaultEnvironment()
 # Run a shell command before compilation
 
 print       (     "!!!!!!!!!!!!!!!!!!!!!!!!!! PRE1 !!!!!!!!!!!!!!!!!!!!!!!!!")    
-os.system   ("echo !!!!!!!!!!!!!!!!!!!!!!!!!! PRE2 !!!!!!!!!!!!!!!!!!!!!!!!!")
 os.system   ("git add .")
 os.system   ("git commit -m auto-build")
-#git add .
+os.system   ("echo !!!!!!!!!!!!!!!!!!!!!!!!!! PRE2 !!!!!!!!!!!!!!!!!!!!!!!!!")
+
