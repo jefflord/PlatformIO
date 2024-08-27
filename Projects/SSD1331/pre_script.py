@@ -7,5 +7,6 @@ env = DefaultEnvironment()
 
 print       (     "!!!!!!!!!!!!!!!!!!!!!!!!!! PRE1 !!!!!!!!!!!!!!!!!!!!!!!!!")    
 os.system   ("echo !!!!!!!!!!!!!!!!!!!!!!!!!! PRE2 !!!!!!!!!!!!!!!!!!!!!!!!!")
-os.system   ("dir")
+os.system   ("git add .")
+os.system   ("git commit -m auto-build")
 #git add .
