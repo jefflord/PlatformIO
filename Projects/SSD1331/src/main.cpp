@@ -3,6 +3,15 @@
 #include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>
 
+#define PWM_PIN 32
+#define PWM_CHANNEL 0
+//#define PWM_FREQUENCY 500
+//#define PWM_FREQUENCY 312500 // Frequency in Hz (500 Hz) 
+#define PWM_FREQUENCY 2441
+
+//#define PWM_RESOLUTION 8
+#define PWM_RESOLUTION 15
+
 #define GFX_BL DF_GFX_BL // Backlight control pin
 #define OLED_CS 5
 #define OLED_DC 21
@@ -25,6 +34,28 @@ void setup()
   Serial.begin(115200);
   while (!Serial)
     continue;
+
+  Serial.print("File: ");
+  Serial.print(PROJECT_SRC_DIR);
+  Serial.print(" (");
+  Serial.print(__FILE__);
+  Serial.println(")");
+  Serial.print("Compiled on: ");
+  Serial.print(__DATE__);
+  Serial.print(" at ");
+  Serial.println(__TIME__);
+
+  int duty = 255 * 0.687;
+  duty = 32767 * 0.27;
+
+  Serial.println();
+  Serial.print("duty:");
+  Serial.println(duty);
+
+  ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
+  ledcAttachPin(PWM_PIN, PWM_CHANNEL);
+  ledcWrite(PWM_CHANNEL, duty); // Set duty cycle to 50% (128/255)
+  return;
 
   pinMode(switchPin, INPUT_PULLUP);
   gfx->begin();
@@ -75,8 +106,6 @@ void setup()
     // delay(2000);
   }
 
-  Serial.println("start");
-
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
@@ -118,6 +147,8 @@ unsigned long elapsedTime;
 
 void loop()
 {
+  return;
+
   switchState = digitalRead(switchPin);
 
   startMicros = micros();
