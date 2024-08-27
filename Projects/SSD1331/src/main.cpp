@@ -55,6 +55,8 @@ void setup()
   Serial.print("/");
   Serial.println(dutyPercent);
 
+  Serial.print("PWM_FREQUENCY:");
+  Serial.println(PWM_FREQUENCY);
 
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
   ledcAttachPin(PWM_PIN, PWM_CHANNEL);
