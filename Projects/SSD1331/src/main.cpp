@@ -46,8 +46,8 @@ void setup()
   Serial.println(__TIME__);
 
   auto dutyPercent = 0.666;
-  int duty = 255 * dutyPercent;
-  duty = 32767 * 0.27;
+  //int duty = 255 * dutyPercent;
+  int duty = 32767 * dutyPercent;
 
   Serial.println();
   Serial.print("duty:");
