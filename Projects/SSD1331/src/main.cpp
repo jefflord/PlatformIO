@@ -5,11 +5,11 @@
 
 #define PWM_PIN 32
 #define PWM_CHANNEL 0
-//#define PWM_FREQUENCY 500
-//#define PWM_FREQUENCY 312500 // Frequency in Hz (500 Hz) 
+// #define PWM_FREQUENCY 500
+// #define PWM_FREQUENCY 312500 // Frequency in Hz (500 Hz)
 #define PWM_FREQUENCY 2441
 
-//#define PWM_RESOLUTION 8
+// #define PWM_RESOLUTION 8
 #define PWM_RESOLUTION 15
 
 #define GFX_BL DF_GFX_BL // Backlight control pin
@@ -45,12 +45,16 @@ void setup()
   Serial.print(" at ");
   Serial.println(__TIME__);
 
-  int duty = 255 * 0.666;
+  int dutyPercent = 0.666;
+  int duty = 255 * dutyPercent;
   duty = 32767 * 0.27;
 
   Serial.println();
   Serial.print("duty:");
-  Serial.println(duty);
+  Serial.print(duty);
+  Serial.print("/");
+  Serial.println(dutyPercent);
+
 
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
   ledcAttachPin(PWM_PIN, PWM_CHANNEL);
