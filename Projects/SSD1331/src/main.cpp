@@ -35,6 +35,7 @@ void setup()
   while (!Serial)
     continue;
 
+  delay(1000);
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
   Serial.print(" (");
@@ -46,7 +47,7 @@ void setup()
   Serial.println(__TIME__);
 
   auto dutyPercent = 0.666;
-  //int duty = 255 * dutyPercent;
+  // int duty = 255 * dutyPercent;
   int duty = 32767 * dutyPercent;
 
   Serial.println();
