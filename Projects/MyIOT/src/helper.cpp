@@ -25,7 +25,7 @@ bool MyIoTHelper::hasTimePassed()
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> elapsed = now - lastConfigUpdateTime;
     std::chrono::duration<double, std::milli> delay_duration(configUpdateSec * 1000); // Convert delay to duration
-    Serial.printf("elapsed %f, delay_duration %f, configUpdateSec %d \n", elapsed, delay_duration, configUpdateSec);
+    // Serial.printf("elapsed %f, delay_duration %f, configUpdateSec %d \n", elapsed, delay_duration, configUpdateSec);
     return elapsed >= delay_duration;
 }
 
@@ -45,7 +45,7 @@ void MyIoTHelper::updateConfig(const String &name)
         xTaskCreate(
             MyIoTHelper::TaskFunction, // Function to run on the new thread
             "internalUpdateConfig",    // Name of the task (for debugging)
-            8192,                      // Stack size (in bytes)
+            4096,                      // Stack size (in bytes)
             params,                    // Parameter passed to the task
             1,                         // Priority (0-24, higher number means higher priority)
             NULL                       // Handle to the task (not used here)
@@ -57,21 +57,21 @@ void MyIoTHelper::updateConfig(const String &name)
     }
 }
 
+void MyIoTHelper::chaos(const String &mode)
+{
+
+    if (mode.equals("wifi"))
+    {
+        Serial.println("killing wifi");
+        WiFi.disconnect(false);
+    }
+}
+
 void MyIoTHelper::TaskFunction(void *parameter)
 {
-    // MyIoTHelper *obj = static_cast<MyIoTHelper *>(parameter);
     TaskParams *params = static_cast<TaskParams *>(parameter);
-
-    Serial.println("internalUpdateConfig AAAA");
     params->obj->internalUpdateConfig(params->message);
-    Serial.println("internalUpdateConfig BBBB");
     vTaskDelete(NULL);
-    // while (true)
-    // {
-    //     // Your task code here
-    //     Serial.println("Task is running");
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay for 1 second
-    // }
 }
 
 void MyIoTHelper::internalUpdateConfig(const String &name)
@@ -99,6 +99,12 @@ void MyIoTHelper::internalUpdateConfig(const String &name)
     Serial.println(jsonPayload);
 
     String payload = "";
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        wiFiBegin(wifi_ssid, wifi_password);
+    }
+
     if (WiFi.status() == WL_CONNECTED)
     {
         HTTPClient http;
@@ -133,11 +139,11 @@ void MyIoTHelper::internalUpdateConfig(const String &name)
             Serial.print("body:");
             Serial.println(body);
 
-            DeserializationError error2 = deserializeJson(bodyDoc, body);
+            error = deserializeJson(bodyDoc, body);
 
-            if (error2)
+            if (error)
             {
-                Serial.printf("Failed to parse Body JSON: %s\n", error2.c_str());
+                Serial.printf("Failed to parse Body JSON: %s\n", error.c_str());
             }
             else
             {
@@ -172,10 +178,12 @@ void mySetup()
     Serial.println(WiFi.macAddress());
 }
 
-wl_status_t wiFiBegin(const String &ssid, const String &passphrase)
+wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
 {
     auto result = WiFi.begin(ssid, passphrase);
 
+    wifi_ssid = ssid;
+    wifi_password = passphrase;
     // auto result = WiFi.begin("","");
 
     while (WiFi.status() != WL_CONNECTED)

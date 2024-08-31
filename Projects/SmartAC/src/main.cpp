@@ -4,11 +4,15 @@
 // #include <ArduinoJson.h>
 #include "helper.h"
 
-const int buttonPin = 33;
+const int button1Pin = 33;
+const int button2Pin = 39;
+
 const int servoPin = 32;
 const int potPin = 34;
 
-int buttonState = 0;
+int button1State = 0;
+int button2State = 0;
+
 int potValue = 0;
 int pressDownHoldTime = 250;
 int startAngle = 90;
@@ -39,19 +43,21 @@ int updateAverage(int nextValue)
 
 /**/
 
-bool btnIsDown = false;
+bool btn1IsDown = false;
+bool btn2IsDown = true;
 
 void setup()
 {
   mySetup();
-  wiFiBegin("DarkNet", "7pu77ies77");
+  helper.wiFiBegin("DarkNet", "7pu77ies77");
 
   for (int i = 0; i < numReadings; i++)
   {
     readings[i] = 0;
   }
 
-  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(button1Pin, INPUT_PULLUP);
+  pinMode(button2Pin, INPUT_PULLUP);
 
   myServo.attach(servoPin);
   myServo.write(startAngle);
@@ -61,7 +67,40 @@ int lastPotValue = -1;
 void loop()
 {
   // Read the state of the button
-  buttonState = digitalRead(buttonPin);
+  button1State = digitalRead(button1Pin);
+  button2State = digitalRead(button2Pin);
+
+  // Serial.printf("btn1 %d -- btn2 %d\n", button1State, button2State);
+  if (button2State == HIGH)
+  {
+    // Serial.println("btn2 low");
+    btn2IsDown = false;
+  }
+  else
+  {
+
+    if (!btn2IsDown)
+    {
+      Serial.println("btn2 down!!!!!");
+      helper.chaos("wifi");
+      btn2IsDown = true;
+    }
+  }
+
+  //   if (button1State == HIGH)
+  //   {
+  //     // Serial.println("btn2 low");
+  //     btn1IsDown = false;
+  //   }
+  //   else
+  //   {
+
+  //     if (!btn1IsDown)
+  //     {
+  //       Serial.println("btn1 down!!!!");
+  //     }
+  //     btn1IsDown = true;
+  //   }
 
   potValue = updateAverage(analogRead(potPin));
   int mappedPotValue = map(updateAverage(potValue), 0, 4095, 0, 180); // Map to 0-180 degrees
@@ -71,9 +110,12 @@ void loop()
     lastPotValue = mappedPotValue;
   }
 
-  if (buttonState == LOW)
+  // delay(100);
+  // return;
+
+  if (button1State == LOW)
   {
-    if (!btnIsDown)
+    if (!btn1IsDown)
     {
 
       helper.updateConfig("SmartAC");
@@ -87,12 +129,12 @@ void loop()
       delay(helper.pressDownHoldTime);
       myServo.write(startAngle);
 
-      btnIsDown = true;
+      btn1IsDown = true;
     }
   }
   else
   {
-    btnIsDown = false;
+    btn1IsDown = false;
     // Serial.print("pot:");
     // Serial.print(potValue);
     // Serial.println();

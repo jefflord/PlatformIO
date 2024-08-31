@@ -21,16 +21,22 @@ public:
     MyIoTHelper();
     ~MyIoTHelper(); // Destructor
     void updateConfig(const String &name);
+    void chaos(const String &mode);
 
     int pressDownHoldTime = 250;
     int configUpdateSec = 60;
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
+
+    wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
 
     static void TaskFunction(void *parameter);
 
 private:
     // Private members (accessible only within the class)
     bool configHasBeenDownloaded = false;
+
+    String wifi_ssid = "";
+    String wifi_password = "";
 
     void internalUpdateConfig(const String &name);
 
