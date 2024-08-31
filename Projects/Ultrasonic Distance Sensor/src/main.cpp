@@ -1,28 +1,26 @@
 #include <Arduino.h>
 #include <NewPing.h>
 
-#define LED_PIN 2 // GPIO2
-// #define TRIG_PIN 15    //
-// #define ECHO_PIN 13    //
+//#define LED_PIN 2 // GPIO2
 
-#define TRIG_PIN 4  //
-#define ECHO_PIN 16 //
-#define MAX_DISTANCE 400
+#define TRIG_PIN 18 //
+#define ECHO_PIN 5 //
+// #define MAX_DISTANCE 400
 
-NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
+// NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 
-#define IR_SENSE_PIN 5 // D1-GPIO5
+//#define IR_SENSE_PIN 5 // D1-GPIO5
 
 void setup()
 {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-
+  // pinMode(LED_PIN, OUTPUT);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-  pinMode(IR_SENSE_PIN, INPUT);
+  
+  // pinMode(IR_SENSE_PIN, INPUT);
 
-  digitalWrite(LED_PIN, HIGH); // OFF
+  // digitalWrite(LED_PIN, HIGH); // OFF
 }
 
 int loopCounter = 0;
@@ -39,7 +37,8 @@ void loop()
   if (test_HC_SRF05_Distance)
   {
     delay(100);
-    unsigned int uS = sonar.ping();
+    unsigned int uS = 0;
+    // unsigned int uS = sonar.ping();
     int distance = uS / US_ROUNDTRIP_CM;
     Serial.print("Distance: ");
     Serial.print(distance);
@@ -47,34 +46,34 @@ void loop()
     return;
   }
 
-  if (testMotion)
-  {
-    Serial.print((loopCounter++ % 8));
-    Serial.print(": ");
+  // if (testMotion)
+  // {
+  //   Serial.print((loopCounter++ % 8));
+  //   Serial.print(": ");
 
-    int sensorValue = digitalRead(IR_SENSE_PIN);
-    if (sensorValue == HIGH)
-    {
-      // if (lastMontionSense)
-      {
-        Serial.println("Movement detected.");
-        digitalWrite(LED_PIN, LOW); // ON
-      }
+  //   int sensorValue = digitalRead(IR_SENSE_PIN);
+  //   if (sensorValue == HIGH)
+  //   {
+  //     // if (lastMontionSense)
+  //     {
+  //       Serial.println("Movement detected.");
+  //       digitalWrite(LED_PIN, LOW); // ON
+  //     }
 
-      lastMontionSense = true;
-    }
-    else
-    {
-      // if (!lastMontionSense)
-      {
-        Serial.println("No movement detected!");
-        digitalWrite(LED_PIN, HIGH); // OFF
-      }
-      lastMontionSense = false;
-    }
-    delay(1000);
-    return;
-  }
+  //     lastMontionSense = true;
+  //   }
+  //   else
+  //   {
+  //     // if (!lastMontionSense)
+  //     {
+  //       Serial.println("No movement detected!");
+  //       digitalWrite(LED_PIN, HIGH); // OFF
+  //     }
+  //     lastMontionSense = false;
+  //   }
+  //   delay(1000);
+  //   return;
+  // }
 
   if (test_HC_SR04_Distance)
   {
@@ -83,7 +82,7 @@ void loop()
     digitalWrite(TRIG_PIN, LOW);
     delayMicroseconds(2);
     digitalWrite(TRIG_PIN, HIGH);
-    delayMicroseconds(100);
+    delayMicroseconds(10);
     digitalWrite(TRIG_PIN, LOW);
 
     duration = pulseIn(ECHO_PIN, HIGH);
@@ -91,11 +90,11 @@ void loop()
     float distance = duration * 0.034 / 2; // Calculate distance in centimeters
     int distanceRounded = round(distance);
 
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.println(" cm");
+    // Serial.print("Distance: ");
+    // Serial.print(distance);
+    // Serial.println(" cm");
 
-    if (false && lastDistance != distanceRounded)
+    if (lastDistance != distanceRounded)
     {
       lastDistance = distanceRounded;
       Serial.print("Distance: ");
@@ -103,7 +102,7 @@ void loop()
       Serial.println(" cm");
     }
 
-    delay(500); // Adjust delay as needed
+    delay(1000); // Adjust delay as needed
     return;
   }
 }

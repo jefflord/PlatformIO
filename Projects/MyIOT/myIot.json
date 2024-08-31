@@ -1,0 +1,10 @@
+{
+  "name": "MyIOT",
+  "version": "1.0.0",
+  "description": "A shared library for multiple PlatformIO projects",
+  "authors": [
+    {
+      "name": "GeoFry"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+#include <Arduino.h>
+#include <ESP32Servo.h>
+// #include <HTTPClient.h>
+// #include <ArduinoJson.h>
+#include "helper.h"
+
+const int buttonPin = 33;
+const int servoPin = 32;
+const int potPin = 34;
+
+int buttonState = 0;
+int potValue = 0;
+int pressDownHoldTime = 250;
+int startAngle = 90;
+
+Servo myServo; // Create a Servo object
+
+/**/
+const int numReadings = 10; // Number of readings to average
+int readings[numReadings];  // Array to store the readings
+int readIndex = 0;          // Index of the current reading
+int total = 0;
+
+MyIoTHelper helper;
+
+int updateAverage(int nextValue)
+{
+  // Subtract the last reading from the total
+  total -= readings[readIndex];
+  // Add the new value to the total
+  readings[readIndex] = nextValue;
+  total += nextValue;
+  // Advance to the next index
+  readIndex = (readIndex + 1) % numReadings;
+
+  // Return the average
+  return total / numReadings;
+}
+
+/**/
+
+bool btnIsDown = false;
+
+void setup()
+{
+  mySetup();
+  wiFiBegin("DarkNet", "7pu77ies77");
+
+  for (int i = 0; i < numReadings; i++)
+  {
+    readings[i] = 0;
+  }
+
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  myServo.attach(servoPin);
+  myServo.write(startAngle);
+}
+
+int lastPotValue = -1;
+void loop()
+{
+  // Read the state of the button
+  buttonState = digitalRead(buttonPin);
+
+  potValue = updateAverage(analogRead(potPin));
+  int mappedPotValue = map(updateAverage(potValue), 0, 4095, 0, 180); // Map to 0-180 degrees
+  if (lastPotValue != mappedPotValue)
+  {
+    Serial.println(mappedPotValue);
+    lastPotValue = mappedPotValue;
+  }
+
+  if (buttonState == LOW)
+  {
+    if (!btnIsDown)
+    {
+
+      helper.updateConfig("SmartAC");
+
+      Serial.print("angle:");
+      Serial.println(mappedPotValue);
+      Serial.print("pressDownHoldTime:");
+      Serial.println(helper.pressDownHoldTime);
+
+      myServo.write(mappedPotValue);
+      delay(helper.pressDownHoldTime);
+      myServo.write(startAngle);
+
+      btnIsDown = true;
+    }
+  }
+  else
+  {
+    btnIsDown = false;
+    // Serial.print("pot:");
+    // Serial.print(potValue);
+    // Serial.println();
+    // Serial.println("Button not pressed.");
+  }
+
+  delay(33); // Small delay to avoid bouncing issues
+}
