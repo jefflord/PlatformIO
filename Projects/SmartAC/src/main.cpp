@@ -14,10 +14,15 @@ int button1State = 0;
 int button2State = 0;
 
 int potValue = 0;
-int pressDownHoldTime = 250;
-int startAngle = 90;
+
+// int pressDownHoldTime = 250;
+// int startAngle = 90;
 
 Servo myServo; // Create a Servo object
+
+#define ONE_WIRE_BUS 4
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 /**/
 const int numReadings = 10; // Number of readings to average
@@ -48,8 +53,9 @@ bool btn2IsDown = true;
 
 void setup()
 {
-  mySetup();
+  helper.Setup();
   helper.wiFiBegin("DarkNet", "7pu77ies77");
+  sensors.begin(); // Start the DS18B20 sensor
 
   for (int i = 0; i < numReadings; i++)
   {
@@ -60,12 +66,61 @@ void setup()
   pinMode(button2Pin, INPUT_PULLUP);
 
   myServo.attach(servoPin);
-  myServo.write(startAngle);
+  myServo.write(helper.servoHomeAngle);
 }
 
 int lastPotValue = -1;
+
+unsigned long previousTempMillis = 0; // Store the last time doTemp() was executed
+
+void doTemp()
+{
+
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousTempMillis >= (helper.tempReadIntevalSec * 1000))
+  {
+    // Save the last time doTemp() was run
+    previousTempMillis = currentMillis;
+
+    // Call the function
+
+    Serial.print("doTemp() ");
+    sensors.requestTemperatures();
+    float temperatureC = sensors.getTempCByIndex(0);
+    float temperatureF = sensors.getTempFByIndex(0);
+
+    auto time = helper.getTime();
+
+    auto itemCount = helper.recordTemp("mytemp1", time, temperatureC);
+
+    Serial.printf("items:  %d, temperature: %f\n", itemCount, temperatureC);
+
+    Serial.print(temperatureC);
+    Serial.print(" -- ");
+    Serial.print(temperatureF);
+    Serial.print(" -- ");
+    Serial.print(time);
+    Serial.print(" -- ");
+    Serial.print(itemCount);
+    Serial.println();
+
+    if (itemCount >= 2)
+    {
+      Serial.println();
+      Serial.println();
+      Serial.println(helper.getStorageAsJson().c_str());
+      Serial.println();
+      helper.clearSource("mytemp1");
+    }
+  }
+}
+
 void loop()
 {
+
+  doTemp();
+
   // Read the state of the button
   button1State = digitalRead(button1Pin);
   button2State = digitalRead(button2Pin);
@@ -121,13 +176,13 @@ void loop()
       helper.updateConfig("SmartAC");
 
       Serial.print("angle:");
-      Serial.println(mappedPotValue);
+      Serial.println(helper.servoAngle);
       Serial.print("pressDownHoldTime:");
       Serial.println(helper.pressDownHoldTime);
 
-      myServo.write(mappedPotValue);
+      myServo.write(helper.servoAngle);
       delay(helper.pressDownHoldTime);
-      myServo.write(startAngle);
+      myServo.write(helper.servoHomeAngle);
 
       btn1IsDown = true;
     }
