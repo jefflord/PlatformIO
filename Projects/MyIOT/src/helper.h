@@ -46,9 +46,9 @@ class MyIoTHelper
 {
 public:
     // Public members (accessible from anywhere)
-    MyIoTHelper();
+    MyIoTHelper(const String &name);        
     ~MyIoTHelper(); // Destructor
-    void updateConfig(const String &name);
+    void updateConfig();
     void chaos(const String &mode);
 
     void Setup();
@@ -59,25 +59,30 @@ public:
     int pressDownHoldTime = 250;
     int configUpdateSec = 60;
     int tempReadIntevalSec = 5;
+    bool testJsonBeforeSend = false;
+    bool sendToDb = true;
+    int tempFlushIntevalSec = 30;
+
     /****/
 
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
 
     String getStorageAsJson();
-    size_t recordTemp(String name, long time, float temperatureC);
+    int64_t flushDatatoDB();
+    size_t recordTemp(String name, int64_t time, float temperatureC);
 
     void clearSource(String name);
+    void clearSource();
 
-    unsigned long getTime();
+    int64_t getTime();
 
     Preferences preferences;
 
     wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
 
+    String configName;
+
     static void TaskFunction(void *parameter);
-
-
-
 
 private:
     bool hasRtc = false;
@@ -86,9 +91,9 @@ private:
 
     std::unordered_map<std::string, int64_t> sourceIdCache;
 
-    unsigned long lastNTPTime = 0;       // Time from the last NTP update
+    int64_t lastNTPTime = 0;             // Time from the last NTP update
     unsigned long lastNTPReadMillis = 0; // millis() at the time of the last NTP update
-
+    
     // Private members (accessible only within the class)
     bool configHasBeenDownloaded = false;
 
@@ -97,12 +102,13 @@ private:
     String wifi_ssid = "";
     String wifi_password = "";
 
-    void internalUpdateConfig(const String &name);
+    void internalUpdateConfig();
 
     void parseConfig(const String &config);
     bool hasTimePassed();
 
     DataStorage storage;
+    NTPClient* timeClient;
 
     const String url = "https://5p9y34b4f9.execute-api.us-east-2.amazonaws.com/test";
 };

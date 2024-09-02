@@ -30,7 +30,7 @@ int readings[numReadings];  // Array to store the readings
 int readIndex = 0;          // Index of the current reading
 int total = 0;
 
-MyIoTHelper helper;
+MyIoTHelper helper("SmartAC");
 
 int updateAverage(int nextValue)
 {
@@ -71,53 +71,69 @@ void setup()
 
 int lastPotValue = -1;
 
-unsigned long previousTempMillis = 0; // Store the last time doTemp() was executed
+unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
+unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
+
+bool doTempStarted = false;
+
+void _doTemp(void *parameter)
+{
+  while (true)
+  {
+    //Serial.println("_doTemp!!!");
+    auto currentMillis = millis();
+    // Serial.print("doTemp() ");
+    sensors.requestTemperatures();
+    float temperatureC = sensors.getTempCByIndex(0);
+    auto time = helper.getTime();
+    auto itemCount = helper.recordTemp("mytemp1", time, temperatureC);
+
+    // Serial.printf("items:  %d, temperature: %f\n", itemCount, temperatureC);
+
+    // if (false)
+    // {
+    //   Serial.print(temperatureC);
+    //   Serial.print(" -- ");
+    //   Serial.print(temperatureF);
+    //   Serial.print(" -- ");
+    //   Serial.print(time);
+    //   Serial.print(" -- ");
+    //   Serial.print(itemCount);
+    //   Serial.println();
+    // }
+
+    if (currentMillis - previousTempFlushMillis >= (helper.tempFlushIntevalSec * 1000))
+    {
+      previousTempFlushMillis = currentMillis;
+      Serial.println("FLUSH TIME");
+      helper.flushDatatoDB();
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(helper.tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
+  }
+}
 
 void doTemp()
 {
 
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousTempMillis >= (helper.tempReadIntevalSec * 1000))
+  if (!doTempStarted)
   {
-    // Save the last time doTemp() was run
-    previousTempMillis = currentMillis;
-
-    // Call the function
-
-    Serial.print("doTemp() ");
-    sensors.requestTemperatures();
-    float temperatureC = sensors.getTempCByIndex(0);
-    float temperatureF = sensors.getTempFByIndex(0);
-
-    auto time = helper.getTime();
-
-    auto itemCount = helper.recordTemp("mytemp1", time, temperatureC);
-
-    Serial.printf("items:  %d, temperature: %f\n", itemCount, temperatureC);
-
-    Serial.print(temperatureC);
-    Serial.print(" -- ");
-    Serial.print(temperatureF);
-    Serial.print(" -- ");
-    Serial.print(time);
-    Serial.print(" -- ");
-    Serial.print(itemCount);
-    Serial.println();
-
-    if (itemCount >= 2)
-    {
-      Serial.println();
-      Serial.println();
-      Serial.println(helper.getStorageAsJson().c_str());
-      Serial.println();
-      helper.clearSource("mytemp1");
-    }
+    doTempStarted = true;
+    xTaskCreate(
+        _doTemp,  // Function to run on the new thread
+        "doTemp", // Name of the task (for debugging)
+        8192,     // Stack size (in bytes)
+        NULL,     // Parameter passed to the task
+        1,        // Priority (0-24, higher number means higher priority)
+        NULL      // Handle to the task (not used here)
+    );
   }
 }
 
 void loop()
 {
+
+  auto startTime = micros();
 
   doTemp();
 
@@ -157,23 +173,23 @@ void loop()
   //     btn1IsDown = true;
   //   }
 
-  potValue = updateAverage(analogRead(potPin));
-  int mappedPotValue = map(updateAverage(potValue), 0, 4095, 0, 180); // Map to 0-180 degrees
-  if (lastPotValue != mappedPotValue)
+  if (false)
   {
-    Serial.println(mappedPotValue);
-    lastPotValue = mappedPotValue;
+    potValue = updateAverage(analogRead(potPin));
+    int mappedPotValue = map(updateAverage(potValue), 0, 4095, 0, 180); // Map to 0-180 degrees
+    if (lastPotValue != mappedPotValue)
+    {
+      Serial.println(mappedPotValue);
+      lastPotValue = mappedPotValue;
+    }
   }
-
-  // delay(100);
-  // return;
 
   if (button1State == LOW)
   {
     if (!btn1IsDown)
     {
 
-      helper.updateConfig("SmartAC");
+      helper.updateConfig();
 
       Serial.print("angle:");
       Serial.println(helper.servoAngle);
@@ -196,5 +212,11 @@ void loop()
     // Serial.println("Button not pressed.");
   }
 
-  delay(33); // Small delay to avoid bouncing issues
+  auto endTime = micros();
+  auto timeTaken = endTime - startTime;
+  if (timeTaken > 16666)
+  {
+    return;
+  }
+  delayMicroseconds(16666 - timeTaken); // Small delay to avoid bouncing issues
 }
