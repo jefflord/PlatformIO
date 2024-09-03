@@ -1,3 +1,9 @@
+/*
+Notes:
+  - Temp senor needs 5v and 4.6kΩR (pull-up I think) 
+  - Activation button has a extra 10kΩR (pull-up)
+*/
+
 #include <Arduino.h>
 #include <ESP32Servo.h>
 // #include <HTTPClient.h>
