@@ -53,7 +53,7 @@ VIN
 #define OLED_SDA 23
 #define OLED_SCL 18
 #define SERVO_PIN 32
-#define TEMP_SENSOR 35
+#define TEMP_SENSOR 34 // work:19, 33, no work: 35
 #define TOUCH_PIN 27
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
