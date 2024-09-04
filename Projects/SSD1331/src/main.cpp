@@ -46,23 +46,26 @@ void setup()
   Serial.print(" at ");
   Serial.println(__TIME__);
 
-  auto dutyPercent = 0.666;
-  // int duty = 255 * dutyPercent;
-  int duty = 32767 * dutyPercent;
+  if (false)
+  {
+    auto dutyPercent = 0.666;
+    // int duty = 255 * dutyPercent;
+    int duty = 32767 * dutyPercent;
 
-  Serial.println();
-  Serial.print("duty:");
-  Serial.print(duty);
-  Serial.print("/");
-  Serial.println(dutyPercent);
+    Serial.println();
+    Serial.print("duty:");
+    Serial.print(duty);
+    Serial.print("/");
+    Serial.println(dutyPercent);
 
-  Serial.print("PWM_FREQUENCY:");
-  Serial.println(PWM_FREQUENCY);
+    Serial.print("PWM_FREQUENCY:");
+    Serial.println(PWM_FREQUENCY);
 
-  ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcAttachPin(PWM_PIN, PWM_CHANNEL);
-  ledcWrite(PWM_CHANNEL, duty); // Set duty cycle to 50% (128/255)
-  return;
+    ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
+    ledcAttachPin(PWM_PIN, PWM_CHANNEL);
+    ledcWrite(PWM_CHANNEL, duty); // Set duty cycle to 50% (128/255)
+    return;
+  }
 
   pinMode(switchPin, INPUT_PULLUP);
   gfx->begin();
