@@ -123,7 +123,7 @@ void onTouch()
   }
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL(x);
 }
 
 void displayTest(int delayTimeMs)
