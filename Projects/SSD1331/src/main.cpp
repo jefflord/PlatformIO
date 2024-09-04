@@ -24,9 +24,9 @@ GPIO26
 GPIO27  TOUCH_PIN
 GPIO32	SERVO
 GPIO33
-GPIO34
+GPIO34  TEMP_SENSOR
 GPIO35
-GPIO36  ONE_WIRE_BUS
+GPIO36
 GPIO39
 VIN
 
@@ -53,7 +53,7 @@ VIN
 #define OLED_SDA 23
 #define OLED_SCL 18
 #define SERVO_PIN 32
-#define ONE_WIRE_BUS 34
+#define TEMP_SENSOR 33
 #define TOUCH_PIN 27
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
@@ -62,7 +62,7 @@ VIN
 #define TEST_PWM_RESOLUTION false
 
 
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire oneWire(TEMP_SENSOR);
 DallasTemperature sensors(&oneWire);
 Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
 Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
