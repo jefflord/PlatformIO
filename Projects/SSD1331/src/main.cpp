@@ -86,13 +86,14 @@ void updateAngle();
 
 TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t queue = NULL;
+int receivedValue;
 
 void taskFunction(void *pvParameters)
 {
   for (;;)
   {
     Serial.printf("xQueueReceive 1\n!");
-    xQueueReceive(queue, NULL, portMAX_DELAY); // Wait for a message
+    xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
     Serial.printf("xQueueReceive 2\n!");
     // Perform your delayed action here
     delay(500);
