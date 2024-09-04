@@ -392,6 +392,7 @@ void updateDisplay(void *p)
   for (;;)
   {
 
+    gfx->setTextColor(WHITE);
     auto startTime = millis();
     gfx->fillRect(0, 0, 96, 64, BLACK);
     // char randomChar = (char)random(97, 127);
@@ -409,6 +410,7 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%4.1f/", temperatureF);
     sprintf(timeString, "%2.0f", temperatureF);
     gfx->print(timeString);
+    gfx->setTextColor(RED);
     gfx->setTextSize(FONT_SIZE - 1);
     gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
@@ -417,6 +419,7 @@ void updateDisplay(void *p)
 
     gfx->setCursor(gfx->getCursorX() + 22, gfx->getCursorY());
 
+    gfx->setTextColor(GREEN);
     sprintf(timeString, "%2.0f", temperatureF);
     gfx->print(timeString);
     gfx->setTextSize(FONT_SIZE - 1);
