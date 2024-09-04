@@ -85,7 +85,6 @@ bool isTouchDown = false;
 void updateAngle();
 void pushServoButton();
 
-
 // TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t onTouchQueue = NULL;
 
@@ -289,9 +288,11 @@ unsigned long elapsedTime;
 int angle = 0;
 bool dirUp = true;
 int touchValue = 0;
+bool servoMoving = false;
 
-void pushServoButton()
+void pushServoButtonX(void *pvParameters)
 {
+  servoMoving = true;
   myServo.write(0);
   delay(1000);
 
@@ -302,7 +303,17 @@ void pushServoButton()
   delay(1000);
 
   myServo.write(0);
-  delay(1000);  
+  delay(1000);
+  servoMoving = false;
+  vTaskDelete(NULL);
+}
+
+void pushServoButton()
+{
+  if (!servoMoving)
+  {
+    xTaskCreate(pushServoButtonX, "pushServoButton", 2048, NULL, 1, NULL);
+  }
 }
 
 void loop()
