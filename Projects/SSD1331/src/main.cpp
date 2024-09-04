@@ -380,11 +380,19 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
 
     auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
-    sprintf(timeString, "%4.1f/", temperatureF);
+    //sprintf(timeString, "%4.1f/", temperatureF);
+    sprintf(timeString, "%4f", temperatureF);
+    gfx->setTextSize(FONT_SIZE - 1);
     gfx->print(timeString);
 
-    sprintf(timeString, "%4.1f", temperatureF + 5.6);
+    sprintf(timeString, "%.1f", temperatureF);
+    gfx->setTextSize(FONT_SIZE);
     gfx->print(timeString);
+
+    
+
+    //sprintf(timeString, "%4.1f", temperatureF + 5.6);
+    //gfx->print(timeString);
     // sprintf(timeString, "%4.1fC", temperatureC);
 
     vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
