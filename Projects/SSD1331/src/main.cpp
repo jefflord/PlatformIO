@@ -363,13 +363,13 @@ String getDecimalPart(double number) {
     char buffer[20];  // Buffer to store the formatted result
 
     // Format the number to get only the decimal part (keeping two decimal places)
-    sprintf(buffer, "%.6f", number);  // Adjust precision if needed (e.g., "%.2f")
+    sprintf(buffer, "%.2f", number);  // Adjust precision if needed (e.g., "%.2f")
 
     // Find the position of the decimal point
     char* decimalPoint = buffer;
-    while (*decimalPoint != '.' && *decimalPoint != '\0') {
-        decimalPoint++;
-    }
+    // while (*decimalPoint != '.' && *decimalPoint != '\0') {
+    //     decimalPoint++;
+    // }
 
     // Return the part after the decimal point
     if (*decimalPoint == '.') {
