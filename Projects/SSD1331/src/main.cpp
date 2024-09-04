@@ -278,7 +278,7 @@ void setup()
   xTaskCreate(
       updateDisplay,   // Function to run on the new thread
       "updateDisplay", // Name of the task (for debugging)
-      1024,            // Stack size (in bytes)
+      8192,            // Stack size (in bytes)
       NULL,            // Parameter passed to the task
       1,               // Priority (0-24, higher number means higher priority)
       NULL             // Handle to the task (not used here)
