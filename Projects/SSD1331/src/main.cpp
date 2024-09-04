@@ -86,6 +86,7 @@ void updateAngle();
 
 TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t queue = NULL;
+int sendValue;
 int receivedValue;
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
@@ -94,7 +95,7 @@ void taskFunction(void *pvParameters)
   for (;;)
   {
     Serial.printf("xQueueReceive 1\n!");
-    //xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
+    xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
     Serial.printf("xQueueReceive 2\n!");
     // Perform your delayed action here
     delay(500);
@@ -117,7 +118,7 @@ void onTouch()
   // &myTaskHandle
 
   taskENTER_CRITICAL(&myMutex);
-  if (xQueueSendFromISR(queue, &receivedValue, &xHigherPriorityTaskWoken) == pdTRUE)
+  if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
     isTouchDown = true;
   }
