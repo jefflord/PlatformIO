@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include <ESP32Servo.h>
 #include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>
 
@@ -19,6 +20,8 @@
 #define OLED_SDA 23
 #define OLED_SCL 18
 
+#define SERVO_PIN 32
+
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
 
@@ -31,6 +34,9 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
 #define TEST_PWM_RESOLUTION false
 
+
+Servo myServo; // Create a Servo object
+
 void setup()
 {
   Serial.begin(115200);
@@ -38,6 +44,7 @@ void setup()
     continue;
 
   delay(1000);
+
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
   Serial.print(" (");
@@ -47,6 +54,9 @@ void setup()
   Serial.print(__DATE__);
   Serial.print(" at ");
   Serial.println(__TIME__);
+
+
+  myServo.attach(servoPin);
 
   if (TEST_PWM_RESOLUTION)
   {
