@@ -138,7 +138,7 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
-  touchAttachInterrupt(T0, onTouch, 10);
+  touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
   auto i = 0;
   while (!true)
   {
