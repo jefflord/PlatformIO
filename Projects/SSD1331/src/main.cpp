@@ -321,6 +321,43 @@ void pushServoButton()
   }
 }
 
+String formatTime(unsigned long epochTime)
+{
+  // Extract hours, minutes, seconds
+  int hours = (epochTime % 86400L) / 3600; // 24-hour format
+  int minutes = (epochTime % 3600) / 60;
+  int seconds = epochTime % 60;
+
+  // Determine if it's AM or PM
+  String ampm = "AM";
+  if (hours >= 12)
+  {
+    ampm = "PM";
+    if (hours > 12)
+      hours -= 12; // Convert to 12-hour format
+  }
+  else if (hours == 0)
+  {
+    hours = 12; // Midnight case
+  }
+
+  // Format the result as hh:mm:ss AM/PM
+  char timeString[12]; // Buffer for formatted time
+  sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
+
+  return String(timeString);
+}
+
+String getTime()
+{
+  auto currentTime = (1725491463531 + millis()) / 1000;
+  return formatTime(currentTime);
+
+  // timeClient->update();
+  // lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+  // return ((int64_t)timeClient->getEpochTime() * 1000);
+}
+
 void updateDisplay(void *p)
 {
   gfx->begin();
@@ -335,9 +372,8 @@ void updateDisplay(void *p)
     gfx->fillRect(0, 0, 96, 64, BLACK);
     // char randomChar = (char)random(97, 127);
     gfx->setCursor(0, SET_CUR_TOP_Y);
-    gfx->printf("%.1f", fps);
-    gfx->print("-");
-    gfx->println(angle);
+
+    gfx->println(getTime());
     gfx->print(temperatureC);
 
     vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
