@@ -387,11 +387,13 @@ void updateDisplay(void *p)
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
-  gfx->setCursor(0, 0);
+  
 
   for (;;)
   {
 
+
+    gfx->setCursor(0, 16);
     gfx->setTextColor(WHITE);
     auto startTime = millis();
     gfx->fillRect(0, 0, 96, 64, BLACK);
