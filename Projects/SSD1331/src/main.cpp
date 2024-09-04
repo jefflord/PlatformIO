@@ -100,7 +100,7 @@ void setup()
   Serial.println("go");
   delay(1000);
 
-    // delay(1000);
+  // delay(1000);
 
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
@@ -254,6 +254,7 @@ void loop()
   if (switchState == LOW)
   {
 
+    Serial.println(angle);
     updateAngle();
     myServo.write(angle);
 
