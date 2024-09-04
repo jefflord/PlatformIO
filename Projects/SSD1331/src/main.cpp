@@ -95,14 +95,15 @@ void setup()
   while (!Serial)
     continue;
 
-
-  // while(true){
-  //   Serial.println("go");
-  //   delay(1000);
-  // }
-
-  // return;
   delay(1000);
+  while (true)
+  {
+    Serial.println("go");
+    delay(1000);
+  }
+
+  return;
+  // delay(1000);
 
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
