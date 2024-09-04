@@ -209,11 +209,10 @@ void setup()
   gfx->begin();
   gfx->fillScreen(BLACK);
   // gfx->setUTF8Print(true);
-
   // gfx->setFont(u8g2_font_helvR08_te); // not fixed
   // gfx->setFont(u8g2_font_bitcasual_tf); // not fixed
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
-  gfx->setFont(u8g2_font_t0_11_tr); // not fixed
+  // gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
   if (false)
   {
