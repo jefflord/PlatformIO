@@ -180,7 +180,7 @@ void setup()
   Serial.println(__TIME__);
 
   myServo.attach(SERVO_PIN);
-  myServo.write(0);
+  // myServo.write(0);
 
   sensors.begin(); // Start the DS18B20 sensor
 
