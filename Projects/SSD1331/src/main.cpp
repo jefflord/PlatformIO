@@ -358,19 +358,25 @@ String getTime()
   // return ((int64_t)timeClient->getEpochTime() * 1000);
 }
 
-char* printDecimalPart(double number) {
-    char buffer[10];  // Buffer to store the result
 
-    // Format the number to get only the decimal part
-    sprintf(buffer, "%.2f", number);  // Keep two decimal places (you can adjust this)
-    
+String getDecimalPart(double number) {
+    char buffer[20];  // Buffer to store the formatted result
+
+    // Format the number to get only the decimal part (keeping two decimal places)
+    sprintf(buffer, "%.6f", number);  // Adjust precision if needed (e.g., "%.2f")
+
     // Find the position of the decimal point
     char* decimalPoint = buffer;
     while (*decimalPoint != '.' && *decimalPoint != '\0') {
         decimalPoint++;
     }
 
-    return decimalPoint;    
+    // Return the part after the decimal point
+    if (*decimalPoint == '.') {
+        return String(decimalPoint + 1);  // Skip the decimal point itself
+    } else {
+        return String("0");  // Return "0" if there is no decimal part
+    }
 }
 void updateDisplay(void *p)
 {
@@ -399,7 +405,7 @@ void updateDisplay(void *p)
     gfx->print(timeString);
 
     gfx->setTextSize(FONT_SIZE - 1);    
-    gfx->print(printDecimalPart(temperatureF));
+    gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
 
     // sprintf(timeString, "%4.1f", temperatureF + 5.6);
