@@ -21,9 +21,9 @@ GPIO22	OLED_RES
 GPIO23	OLED_SDA
 GPIO25
 GPIO26
-GPIO27
+GPIO27  TOUCH_PIN
 GPIO32	SERVO
-GPIO33
+GPIO33  ONE_WIRE_BUS
 GPIO34
 GPIO35
 GPIO36
@@ -35,14 +35,15 @@ VIN
 3V3		OLED_VCC
 GND		OLED_GND
 GPIO05	OLED_CS
+GPIO16  SWITCH_PIN
 GPIO18	OLED_SCL
 GPIO21	OLED_DC
 GPIO22	OLED_RES
 GPIO23	OLED_SDA
-
-GPIO16  SWITCH_PIN
-
+GPIO27  TOUCH_PIN
 GPIO32	SERVO
+GPIO33  ONE_WIRE_BUS
+
 */
 #include <Arduino.h>
 #include <SPI.h>
@@ -57,37 +58,29 @@ GPIO32	SERVO
 // #define PWM_FREQUENCY 500
 // #define PWM_FREQUENCY 312500 // Frequency in Hz (500 Hz)
 #define PWM_FREQUENCY 2441
-
 // #define PWM_RESOLUTION 8
 #define PWM_RESOLUTION 15
-
 #define GFX_BL DF_GFX_BL // Backlight control pin
 #define OLED_CS 5
 #define OLED_DC 21
 #define OLED_RES 22
 #define OLED_SDA 23
 #define OLED_SCL 18
-
 #define SERVO_PIN 32
-
 #define ONE_WIRE_BUS 33
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
+#define TOUCH_PIN 27
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
-
 #define GFX_BL DF_GFX_BL // Backlight control pin
-
-Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
-Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
-
 #define SWITCH_PIN 16
-
 #define TEST_PWM_RESOLUTION false
 
-Servo myServo; // Create a Servo object
 
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
+Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
+Servo myServo; // Create a Servo object
 float temperatureC = 0;
 
 void getTemp(void *parameter)
@@ -100,6 +93,11 @@ void getTemp(void *parameter)
     Serial.println(temperatureC);
     vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
   }
+}
+
+void onTouch()
+{
+  Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 }
 
 void setup()
@@ -155,6 +153,7 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
+  touchAttachInterrupt(T0, onTouch, 40);
   auto i = 0;
   while (!true)
   {
@@ -194,22 +193,38 @@ void setup()
     // delay(2000);
   }
 
+  if (false)
+  {
+    displayTest();
+  }
+
+  xTaskCreate(
+      getTemp,   // Function to run on the new thread
+      "getTemp", // Name of the task (for debugging)
+      8192,      // Stack size (in bytes)
+      NULL,      // Parameter passed to the task
+      1,         // Priority (0-24, higher number means higher priority)
+      NULL       // Handle to the task (not used here)
+  );
+
+  Serial.println("Setup Done");
+}
+
+void displayTest()
+{
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
   gfx->setCursor(2, SET_CUR_TOP_Y);
   gfx->print("1");
-  // gfx->drawRect(0, 0, 10, 20, WHITE);
 
   delay(1000);
   gfx->setCursor(2, SET_CUR_TOP_Y);
-  // gfx->drawRect(0, 0, 20, 20, WHITE);
   gfx->print("12");
 
   delay(1000);
   gfx->setCursor(2, SET_CUR_TOP_Y);
-  // gfx->drawRect(0, 0, 30, 20, WHITE);
   gfx->print("123");
 
   delay(1000);
@@ -221,17 +236,6 @@ void setup()
   gfx->fillScreen(BLACK);
 
   gfx->drawRect(0, 0, 96, 64, WHITE);
-
-  Serial.println("done");
-
-  xTaskCreate(
-      getTemp,   // Function to run on the new thread
-      "getTemp", // Name of the task (for debugging)
-      8192,      // Stack size (in bytes)
-      NULL,      // Parameter passed to the task
-      1,         // Priority (0-24, higher number means higher priority)
-      NULL       // Handle to the task (not used here)
-  );
 }
 
 unsigned long lastTime = millis(); // Last recorded time
@@ -244,9 +248,6 @@ unsigned long elapsedTime;
 
 int angle = 0;
 bool dirUp = true;
-
-
-
 
 void loop()
 {
@@ -287,7 +288,7 @@ void loop()
     gfx->print("-");
     gfx->println(angle);
     gfx->print(temperatureC);
-    
+
     elapsedTime = micros() - startMicros;
     // 8333
     delayMicroseconds(16666 * 1 - elapsedTime);
