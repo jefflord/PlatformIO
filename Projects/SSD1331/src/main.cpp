@@ -307,7 +307,7 @@ void loop()
   if (switchState == LOW || isTouchDown)
   {
 
-    Serial.println(angle);
+    //Serial.println(angle);
     updateAngle();
     myServo.write(angle);
 
