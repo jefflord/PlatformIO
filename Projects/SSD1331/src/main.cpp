@@ -98,8 +98,21 @@ void onTouch()
 
   // &myTaskHandle
   isTouchDown = true;
-  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, &myTaskHandle); // Create the task
+
+  // if (myTaskHandle == NULL)
+  // {
+  //   xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, &myTaskHandle); // Create the task
+  // }
+  // else
+  // {
+  //   vTaskSuspend(myTaskHandle);
+  // }
+
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
+
+  delay(500);
+  isTouchDown = false;
+  Serial.printf("Touch detected done %d\n!", TOUCH_PIN);
 }
 
 void displayTestx(int delayTimeMs)
