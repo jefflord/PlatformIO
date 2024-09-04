@@ -55,7 +55,7 @@ VIN
 #define SERVO_PIN 32
 #define TEMP_SENSOR_1WIRE 19
 #define TOUCH_PIN 33
-#define SET_CUR_TOP_Y 8 * 2
+#define SET_CUR_TOP_Y 16
 #define FONT_SIZE 2
 #define GFX_BL DF_GFX_BL // Backlight control pin
 #define SWITCH_PIN 16
@@ -134,6 +134,7 @@ void onTouch()
 void displayTest(int delayTimeMs)
 {
 
+  return;
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
@@ -264,7 +265,7 @@ void setup()
     // delay(2000);
   }
 
-  displayTest(654);
+  displayTest(100);
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -322,13 +323,17 @@ void pushServoButton()
 
 void updateDisplay(void *p)
 {
+  gfx->begin();
+  gfx->setTextSize(FONT_SIZE);
+  gfx->fillScreen(BLACK);
+  gfx->setCursor(0, 0);
+
   for (;;)
   {
 
     auto startTime = millis();
-    char randomChar = (char)random(97, 127);
-    gfx->fillRect(1, 1, 94, 62, BLACK);
-    gfx->setCursor(2, SET_CUR_TOP_Y);
+    // char randomChar = (char)random(97, 127);
+    gfx->setCursor(0, SET_CUR_TOP_Y);
     gfx->printf("%.1f", fps);
     gfx->print("-");
     gfx->println(angle);
