@@ -190,7 +190,7 @@ void setup()
     // delay(2000);
   }
 
-  displayTest(654);
+  displayTestx(654);
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -204,7 +204,7 @@ void setup()
   Serial.println("Setup Done");
 }
 
-void displayTest(int delayTimeMs)
+void displayTestx(int delayTimeMs)
 {
 
   gfx->begin();
