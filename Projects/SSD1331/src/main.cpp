@@ -84,6 +84,7 @@ bool isTouchDown = false;
 
 void updateAngle();
 void pushServoButton();
+void updateDisplay(void *p);
 
 // TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t onTouchQueue = NULL;
