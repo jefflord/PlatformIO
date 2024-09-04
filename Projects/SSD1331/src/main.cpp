@@ -67,6 +67,9 @@ GPIO32	SERVO
 #define OLED_SCL 18
 
 #define SERVO_PIN 32
+OneWire oneWire(ONE_WIRE_BUS);
+
+#define ONE_WIRE_BUS 4
 
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
