@@ -209,7 +209,7 @@ void loop()
 
     elapsedTime = micros() - startMicros;
     // 8333
-    delayMicroseconds(16666 * 2 - elapsedTime);
+    delayMicroseconds(16666 * 1 - elapsedTime);
     // delay(1000);
   }
   else
