@@ -49,6 +49,8 @@ GPIO32	SERVO
 #include <ESP32Servo.h>
 #include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 #define PWM_PIN 32
 #define PWM_CHANNEL 0
@@ -67,9 +69,10 @@ GPIO32	SERVO
 #define OLED_SCL 18
 
 #define SERVO_PIN 32
-OneWire oneWire(ONE_WIRE_BUS);
 
 #define ONE_WIRE_BUS 4
+
+OneWire oneWire(ONE_WIRE_BUS);
 
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
