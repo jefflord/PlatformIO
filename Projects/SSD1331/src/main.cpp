@@ -30,10 +30,9 @@
 Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
 Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
-#define switchPin 4
+#define SWITCH_PIN 4
 
 #define TEST_PWM_RESOLUTION false
-
 
 Servo myServo; // Create a Servo object
 
@@ -55,8 +54,8 @@ void setup()
   Serial.print(" at ");
   Serial.println(__TIME__);
 
-
-  myServo.attach(servoPin);
+  myServo.attach(SERVO_PIN);
+  myServo.write(0);
 
   if (TEST_PWM_RESOLUTION)
   {
@@ -79,7 +78,7 @@ void setup()
     return;
   }
 
-  pinMode(switchPin, INPUT_PULLUP);
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
   gfx->begin();
   gfx->fillScreen(BLACK);
   // gfx->setUTF8Print(true);
@@ -167,17 +166,40 @@ auto switchState = HIGH;
 unsigned long startMicros;
 unsigned long elapsedTime;
 
+int angle = 0;
+bool dirUp = true;
+
 void loop()
 {
 
+  if (dirUp && angle >= 180)
+  {
+    dirUp = false;
+  }
+  else if (!dirUp && angle <= 0)
+  {
+    dirUp = true;
+  }
+  if (dirUp)
+  {
+    angle++;
+  }
+  else
+  {
+    angle--;
+  }
+
   // return;
 
-  switchState = digitalRead(switchPin);
+  switchState = digitalRead(SWITCH_PIN);
 
   startMicros = micros();
 
   if (switchState == LOW)
   {
+
+    myServo.write(angle);
+
     frameCount++;
     totalFrameCount++;
     unsigned long currentTime = millis();
