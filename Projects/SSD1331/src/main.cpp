@@ -94,7 +94,7 @@ void taskFunction(void *pvParameters)
   for (;;)
   {
     Serial.printf("xQueueReceive 1\n!");
-    xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
+    //xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
     Serial.printf("xQueueReceive 2\n!");
     // Perform your delayed action here
     delay(500);
