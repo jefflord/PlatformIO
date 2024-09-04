@@ -274,6 +274,15 @@ void setup()
       NULL       // Handle to the task (not used here)
   );
 
+  xTaskCreate(
+      updateDisplay,   // Function to run on the new thread
+      "updateDisplay", // Name of the task (for debugging)
+      1024,            // Stack size (in bytes)
+      NULL,            // Parameter passed to the task
+      1,               // Priority (0-24, higher number means higher priority)
+      NULL             // Handle to the task (not used here)
+  );
+
   Serial.println("Setup Done");
 }
 
@@ -310,10 +319,28 @@ void pushServoButton()
   }
 }
 
+void updateDisplay(void *p)
+{
+  for (;;)
+  {
+
+    auto startTime = millis();
+    char randomChar = (char)random(97, 127);
+    gfx->fillRect(1, 1, 94, 62, BLACK);
+    gfx->setCursor(2, SET_CUR_TOP_Y);
+    gfx->printf("%.1f", fps);
+    gfx->print("-");
+    gfx->println(angle);
+    gfx->print(temperatureC);
+
+    vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+  }
+}
+
 void loop()
 {
 
-  // return;
+  return;
 
   switchState = digitalRead(SWITCH_PIN);
 
