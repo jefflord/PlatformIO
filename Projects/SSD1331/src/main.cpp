@@ -229,7 +229,8 @@ void getTemp()
 {
   sensors.requestTemperatures();
   temperatureC = sensors.getTempCByIndex(0);
-  Serial.printf("temp %f\n", temperatureC);
+  Serial.print("temp");
+  Serial.println(temperatureC);
 }
 
 void loop()
