@@ -84,6 +84,7 @@ bool isTouchDown = false;
 
 void updateAngle();
 
+TaskHandle_t myTaskHandle = NULL;
 void delayedTask(void *parameter)
 {
   // Your delayed code here
@@ -97,7 +98,7 @@ void onTouch()
 
   // &myTaskHandle
   isTouchDown = true;
-  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
+  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, &myTaskHandle); // Create the task
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 }
 
