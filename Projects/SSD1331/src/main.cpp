@@ -121,16 +121,19 @@ void onTouch()
   // &myTaskHandle
 
   taskENTER_CRITICAL(&myMutex);
-  sendValue = 1;
-  if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
+  if (!isTouchDown)
   {
-    isTouchDown = true;
+    sendValue = 1;
+    if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
+    {
+      isTouchDown = true;
+    }
+    // else
+    // {
+    //   isTouchDown = false;
+    // }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
-  // else
-  // {
-  //   isTouchDown = false;
-  // }
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
   Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
 
@@ -307,7 +310,7 @@ void loop()
   if (switchState == LOW || isTouchDown)
   {
 
-    //Serial.println(angle);
+    // Serial.println(angle);
     updateAngle();
     myServo.write(angle);
 
