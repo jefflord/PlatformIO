@@ -209,6 +209,15 @@ void setup()
   gfx->drawRect(0, 0, 96, 64, WHITE);
 
   Serial.println("done");
+
+  xTaskCreate(
+      getTemp,   // Function to run on the new thread
+      "getTemp", // Name of the task (for debugging)
+      8192,      // Stack size (in bytes)
+      NULL,      // Parameter passed to the task
+      1,         // Priority (0-24, higher number means higher priority)
+      NULL       // Handle to the task (not used here)
+  );
 }
 
 unsigned long lastTime = millis(); // Last recorded time
@@ -223,20 +232,20 @@ int angle = 0;
 bool dirUp = true;
 float temperatureC = 0;
 
-void getTemp()
+void getTemp(void *parameter)
 {
-  sensors.requestTemperatures();
-  temperatureC = sensors.getTempCByIndex(0);
-  Serial.print("temp");
-  Serial.println(temperatureC);
+  while (true)
+  {
+    sensors.requestTemperatures();
+    temperatureC = sensors.getTempCByIndex(0);
+    Serial.print("temp: ");
+    Serial.println(temperatureC);
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
+  }
 }
 
 void loop()
 {
-
-  getTemp();
-  delay(500);
-  return;
 
   // return;
 
@@ -272,8 +281,9 @@ void loop()
     // gfx->print("-");
     gfx->printf("%.1f", fps);
     gfx->print("-");
-    gfx->print(angle);
-
+    gfx->println(angle);
+    gfx->print(temperatureC);
+    
     elapsedTime = micros() - startMicros;
     // 8333
     delayMicroseconds(16666 * 1 - elapsedTime);
