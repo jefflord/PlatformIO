@@ -412,6 +412,9 @@ void updateDisplay(void *p)
     gfx->setTextSize(FONT_SIZE);
 
     temperatureF += 5.6;
+
+    gfx->setCursor(gfx->getCursorX() + 10, gfx->getCursorY());
+
     sprintf(timeString, "%2.0f", temperatureF);
     gfx->print(timeString);
     gfx->setTextSize(FONT_SIZE - 1);
