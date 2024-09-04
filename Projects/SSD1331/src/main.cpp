@@ -221,7 +221,7 @@ void loop()
     // gfx->print("-");
     gfx->printf("%.1f", fps);
     gfx->print("-");
-    gfx->print(totalFrameCount);
+    gfx->print(angle);
 
     elapsedTime = micros() - startMicros;
     // 8333
