@@ -83,6 +83,8 @@ void getTemp(void *parameter)
 bool isTouchDown = false;
 
 void updateAngle();
+void pushServoButton();
+
 
 // TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t onTouchQueue = NULL;
