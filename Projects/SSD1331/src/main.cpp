@@ -29,6 +29,8 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
 int switchPin = 4;
 
+#define TEST_PWM_RESOLUTION true
+
 void setup()
 {
   Serial.begin(115200);
@@ -46,7 +48,7 @@ void setup()
   Serial.print(" at ");
   Serial.println(__TIME__);
 
-  if (false)
+  if (TEST_PWM_RESOLUTION)
   {
     auto dutyPercent = 0.666;
     // int duty = 255 * dutyPercent;
