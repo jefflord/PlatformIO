@@ -134,6 +134,7 @@ void onTouch()
 
   if (isTouchDown)
   {
+    isTouchDown = false;
     sendValue = 2;
     if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
     {
