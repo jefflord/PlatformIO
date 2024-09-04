@@ -159,7 +159,8 @@ unsigned long elapsedTime;
 
 void loop()
 {
-  return;
+  
+  //return;
 
   switchState = digitalRead(switchPin);
 
