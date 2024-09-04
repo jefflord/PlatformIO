@@ -1,13 +1,11 @@
 /*
 Notes:
-  - Temp senor needs 5v and 4.6kΩR (pull-up I think) 
+  - Temp senor needs 5v and 4.6kΩR (pull-up I think)
   - Activation button has a extra 10kΩR (pull-up)
 */
 
 #include <Arduino.h>
 #include <ESP32Servo.h>
-// #include <HTTPClient.h>
-// #include <ArduinoJson.h>
 #include "helper.h"
 
 const int button1Pin = 33;
@@ -37,20 +35,6 @@ int readIndex = 0;          // Index of the current reading
 int total = 0;
 
 MyIoTHelper helper("SmartAC");
-
-int updateAverage(int nextValue)
-{
-  // Subtract the last reading from the total
-  total -= readings[readIndex];
-  // Add the new value to the total
-  readings[readIndex] = nextValue;
-  total += nextValue;
-  // Advance to the next index
-  readIndex = (readIndex + 1) % numReadings;
-
-  // Return the average
-  return total / numReadings;
-}
 
 /**/
 
@@ -86,7 +70,7 @@ void _doTemp(void *parameter)
 {
   while (true)
   {
-    //Serial.println("_doTemp!!!");
+    // Serial.println("_doTemp!!!");
     auto currentMillis = millis();
     // Serial.print("doTemp() ");
     sensors.requestTemperatures();
@@ -178,17 +162,6 @@ void loop()
   //     }
   //     btn1IsDown = true;
   //   }
-
-  if (false)
-  {
-    potValue = updateAverage(analogRead(potPin));
-    int mappedPotValue = map(updateAverage(potValue), 0, 4095, 0, 180); // Map to 0-180 degrees
-    if (lastPotValue != mappedPotValue)
-    {
-      Serial.println(mappedPotValue);
-      lastPotValue = mappedPotValue;
-    }
-  }
 
   if (button1State == LOW)
   {
