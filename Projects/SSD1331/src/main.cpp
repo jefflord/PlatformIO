@@ -399,6 +399,8 @@ void updateDisplay(void *p)
 
     gfx->println(getTime());
 
+    gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 10);
+
     char timeString[20]; // Buffer for formatted time
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
