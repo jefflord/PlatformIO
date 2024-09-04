@@ -208,6 +208,7 @@ void setup()
 
 void displayTest()
 {
+  return;
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
