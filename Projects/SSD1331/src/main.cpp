@@ -89,22 +89,18 @@ QueueHandle_t queue = NULL;
 int sendValue;
 int receivedValue;
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-void taskFunction(void *pvParameters)
+// portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+void onTouchOffWatcher(void *pvParameters)
 {
   for (;;)
   {
-
-    Serial.printf("xQueueReceive 1\n!");
+    // Serial.printf("xQueueReceive 1\n!");
     xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
-    Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
-    // if (receivedValue == 2)
+    // Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
+    if (isTouchDown)
     {
-      if (isTouchDown)
-      {
-        vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
-        isTouchDown = false;
-      }
+      vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
+      isTouchDown = false;
     }
   }
 }
@@ -125,14 +121,12 @@ void onTouch()
 
   // taskENTER_CRITICAL(&myMutex);
   // Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
-
   sendValue = 2;
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
     isTouchDown = true;
   }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-
   // taskEXIT_CRITICAL(&myMutex);
 }
 
@@ -220,7 +214,7 @@ void setup()
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
   queue = xQueueCreate(1, sizeof(uint8_t));
-  xTaskCreate(taskFunction, "Task", 2048, NULL, 1, &myTaskHandle);
+  xTaskCreate(onTouchOffWatcher, "onTouch", 2048, NULL, 1, &myTaskHandle);
   touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
 
   auto i = 0;
