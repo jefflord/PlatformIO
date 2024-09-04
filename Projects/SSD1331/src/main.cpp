@@ -121,7 +121,6 @@ void onTouch()
   {
     isTouchDown = true;
   }
-
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   taskEXIT_CRITICAL(&myMutex);
 }
