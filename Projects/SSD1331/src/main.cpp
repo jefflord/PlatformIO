@@ -29,7 +29,7 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
 int switchPin = 4;
 
-#define TEST_PWM_RESOLUTION true
+#define TEST_PWM_RESOLUTION false
 
 void setup()
 {
