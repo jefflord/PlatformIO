@@ -91,7 +91,9 @@ void taskFunction(void *pvParameters)
 {
   for (;;)
   {
+    Serial.printf("xQueueReceive 1\n!");
     xQueueReceive(queue, NULL, portMAX_DELAY); // Wait for a message
+    Serial.printf("xQueueReceive 2\n!");
     // Perform your delayed action here
     delay(500);
     isTouchDown = false;
@@ -109,6 +111,7 @@ void delayedTask(void *parameter)
 void onTouch()
 {
 
+  Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
   // &myTaskHandle
   isTouchDown = true;
   xQueueSendFromISR(queue, NULL, NULL);
@@ -121,11 +124,9 @@ void onTouch()
   // {
   //   vTaskSuspend(myTaskHandle);
   // }
-
-  Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 }
 
-void displayTestx(int delayTimeMs)
+void displayTest(int delayTimeMs)
 {
 
   gfx->begin();
@@ -251,7 +252,7 @@ void setup()
     // delay(2000);
   }
 
-  displayTestx(654);
+  displayTest(654);
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
