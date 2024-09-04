@@ -88,6 +88,8 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
 Servo myServo; // Create a Servo object
 
+float temperatureC = 0;
+
 void getTemp(void *parameter)
 {
   while (true)
@@ -242,7 +244,7 @@ unsigned long elapsedTime;
 
 int angle = 0;
 bool dirUp = true;
-float temperatureC = 0;
+
 
 
 
