@@ -279,7 +279,7 @@ unsigned long elapsedTime;
 
 int angle = 0;
 bool dirUp = true;
-
+int touchValue = 0;
 void loop()
 {
 
@@ -288,6 +288,11 @@ void loop()
   switchState = digitalRead(SWITCH_PIN);
 
   startMicros = micros();
+
+  touchValue = touchRead(TOUCH_PIN);
+
+  Serial.print("touchValue");
+  Serial.println(touchValue);
 
   if (switchState == LOW || isTouchDown)
   {
