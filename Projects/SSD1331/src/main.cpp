@@ -94,6 +94,8 @@ void delayedTask(void *parameter)
 
 void onTouch()
 {
+
+  // &myTaskHandle
   isTouchDown = true;
   xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
