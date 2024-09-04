@@ -98,11 +98,11 @@ void taskFunction(void *pvParameters)
     Serial.printf("xQueueReceive 1\n!");
     xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
     Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
-    // if (receivedValue == 2)
-    // {
-    //   vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
-    //   isTouchDown = false;
-    // }
+    if (receivedValue == 2)
+    {
+      vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
+      isTouchDown = false;
+    }
   }
 }
 
@@ -227,7 +227,7 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
-  queue = xQueueCreate(10, sizeof(uint8_t));
+  queue = xQueueCreate(1, sizeof(uint8_t));
   xTaskCreate(taskFunction, "Task", 2048, NULL, 1, &myTaskHandle);
   touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
 
