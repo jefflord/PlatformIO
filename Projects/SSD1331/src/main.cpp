@@ -95,6 +95,9 @@ void setup()
   while (!Serial)
     continue;
 
+
+  Serial.println("go");
+  return;
   delay(1000);
 
   Serial.print("File: ");
