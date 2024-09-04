@@ -190,7 +190,7 @@ void setup()
     // delay(2000);
   }
 
-  displayTest(10);
+  displayTest();
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
