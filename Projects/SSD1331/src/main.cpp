@@ -382,23 +382,28 @@ String getDecimalPart(double number)
     return String("0"); // Return "0" if there is no decimal part
   }
 }
+
+int getSignal()
+{
+
+  return 78;
+}
+
 void updateDisplay(void *p)
 {
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
-  
 
   for (;;)
   {
 
-
-    gfx->setCursor(0, 16);
+    
     gfx->setTextColor(WHITE);
     auto startTime = millis();
     gfx->fillRect(0, 0, 96, 64, BLACK);
     // char randomChar = (char)random(97, 127);
-    gfx->setCursor(0, SET_CUR_TOP_Y);
+    gfx->setCursor(0, SET_CUR_TOP_Y + 16);
 
     gfx->println(getTime());
 
@@ -412,7 +417,7 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%4.1f/", temperatureF);
     gfx->setTextColor(BLUE);
     sprintf(timeString, "%2.0f", temperatureF);
-    gfx->print(timeString);    
+    gfx->print(timeString);
     gfx->setTextSize(FONT_SIZE - 1);
     gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
