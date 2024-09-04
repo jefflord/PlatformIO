@@ -97,7 +97,7 @@ void taskFunction(void *pvParameters)
 
     Serial.printf("xQueueReceive 1\n!");
     xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
-    Serial.printf("xQueueReceive 2\n!");
+    Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
     // Perform your delayed action here
     vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
     isTouchDown = false;
@@ -119,6 +119,7 @@ void onTouch()
   // &myTaskHandle
 
   taskENTER_CRITICAL(&myMutex);
+  sendValue = 99;
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
     isTouchDown = true;
