@@ -110,7 +110,7 @@ void onTouch()
 
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 
-  delay(500);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   isTouchDown = false;
   Serial.printf("Touch detected done %d\n!", TOUCH_PIN);
 }
