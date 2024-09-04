@@ -53,8 +53,8 @@ VIN
 #define OLED_SDA 23
 #define OLED_SCL 18
 #define SERVO_PIN 32
-#define TEMP_SENSOR_1WIRE 19 // work:19, 33
-#define TOUCH_PIN 27
+#define TEMP_SENSOR_1WIRE 19
+#define TOUCH_PIN 33
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
 #define GFX_BL DF_GFX_BL // Backlight control pin
