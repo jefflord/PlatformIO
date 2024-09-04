@@ -90,14 +90,12 @@ void delayedTask(void *parameter)
   vTaskDelete(NULL); // Delete the task after it's done
 }
 
-
 void onTouch()
 {
   isTouchDown = true;
   xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 }
-
 
 void setup()
 {
@@ -192,7 +190,7 @@ void setup()
     // delay(2000);
   }
 
-  displayTest();
+  displayTest(10);
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -206,31 +204,31 @@ void setup()
   Serial.println("Setup Done");
 }
 
-void displayTest()
+void displayTest(int delayTimeMs)
 {
-  return;
+
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
-  return;
 
   gfx->setCursor(2, SET_CUR_TOP_Y);
+
   gfx->print("1");
 
-  delay(1000);
+  delay(delayTimeMs);
   gfx->setCursor(2, SET_CUR_TOP_Y);
   gfx->print("12");
 
-  delay(1000);
+  delay(delayTimeMs);
   gfx->setCursor(2, SET_CUR_TOP_Y);
   gfx->print("123");
 
-  delay(1000);
+  delay(delayTimeMs);
   gfx->setCursor(2, SET_CUR_TOP_Y);
 
   gfx->print("1234");
 
-  delay(1000);
+  delay(delayTimeMs);
   gfx->fillScreen(BLACK);
 
   gfx->drawRect(0, 0, 96, 64, WHITE);
