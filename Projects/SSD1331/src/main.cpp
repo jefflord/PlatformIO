@@ -221,7 +221,7 @@ void setup()
   }
   else
   {
-    touchAttachInterrupt(TOUCH_PIN, pushServoButton, 40);
+    touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
   }
 
   auto i = 0;
@@ -293,7 +293,7 @@ bool servoMoving = false;
 void pushServoButtonX(void *pvParameters)
 {
   servoMoving = true;
-  
+
   myServo.write(0);
   delay(750);
   myServo.write(90);
@@ -328,8 +328,8 @@ void loop()
   {
 
     // Serial.println(angle);
-    updateAngle();
-    myServo.write(angle);
+    // updateAngle();
+    // myServo.write(angle);
 
     frameCount++;
     totalFrameCount++;
