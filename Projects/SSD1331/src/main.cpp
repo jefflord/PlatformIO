@@ -61,7 +61,6 @@ VIN
 #define SWITCH_PIN 16
 #define TEST_PWM_RESOLUTION false
 
-
 OneWire oneWire(TEMP_SENSOR_1WIRE);
 DallasTemperature sensors(&oneWire);
 Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
@@ -139,7 +138,7 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
-  touchAttachInterrupt(T0, onTouch, 40);
+  touchAttachInterrupt(T0, onTouch, 10);
   auto i = 0;
   while (!true)
   {
@@ -179,10 +178,7 @@ void setup()
     // delay(2000);
   }
 
-  if (false)
-  {
-    displayTest();
-  }
+  displayTest();
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -201,6 +197,7 @@ void displayTest()
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
+  return;
 
   gfx->setCursor(2, SET_CUR_TOP_Y);
   gfx->print("1");
