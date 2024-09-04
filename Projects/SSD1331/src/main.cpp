@@ -212,10 +212,13 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
-  onTouchQueue = xQueueCreate(1, sizeof(uint8_t));
-  xTaskCreate(onTouchOffWatcher, "onTouch", 2048, NULL, 1, NULL);
-  touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
-
+  if (false)
+  {
+    onTouchQueue = xQueueCreate(1, sizeof(uint8_t));
+    xTaskCreate(onTouchOffWatcher, "onTouch", 2048, NULL, 1, NULL);
+    touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
+  }
+  
   auto i = 0;
   while (!true)
   {
@@ -291,10 +294,10 @@ void loop()
 
   touchValue = touchRead(TOUCH_PIN);
 
-  Serial.print("touchValue");
-  Serial.println(touchValue);
+  // Serial.print("touchValue");
+  // Serial.println(touchValue);
 
-  if (switchState == LOW || isTouchDown)
+  if (switchState == LOW || isTouchDown || touchValue < 40)
   {
 
     // Serial.println(angle);
