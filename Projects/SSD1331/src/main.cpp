@@ -408,9 +408,9 @@ void updateDisplay(void *p)
 
     auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
     // sprintf(timeString, "%4.1f/", temperatureF);
-    sprintf(timeString, "%2.0f", temperatureF);
-    gfx->print(timeString);
     gfx->setTextColor(RED);
+    sprintf(timeString, "%2.0f", temperatureF);
+    gfx->print(timeString);    
     gfx->setTextSize(FONT_SIZE - 1);
     gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
