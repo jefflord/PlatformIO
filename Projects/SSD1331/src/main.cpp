@@ -55,7 +55,7 @@ VIN
 #define SERVO_PIN 32
 #define TEMP_SENSOR_1WIRE 19
 #define TOUCH_PIN 33
-#define SET_CUR_TOP_Y 16
+#define SET_CUR_TOP_Y 16 - 16
 #define FONT_SIZE 2
 #define GFX_BL DF_GFX_BL // Backlight control pin
 #define SWITCH_PIN 16
@@ -378,7 +378,7 @@ void updateDisplay(void *p)
     char timeString[20]; // Buffer for formatted time
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     //sprintf(timeString, "%4.1f\u00B0C", temperatureC);
-    sprintf(timeString, "%4.1f°C", temperatureC);
+    sprintf(timeString, "%4.1fC", temperatureC);
 
     gfx->print(timeString);
 
