@@ -192,7 +192,8 @@ void loop()
     gfx->print(totalFrameCount);
 
     elapsedTime = micros() - startMicros;
-    delayMicroseconds(16666 * 2 - elapsedTime);
+    // 8333
+    delayMicroseconds(8333 - elapsedTime);
     // delay(1000);
   }
   else
