@@ -70,7 +70,7 @@ GPIO32	SERVO
 
 #define SERVO_PIN 32
 
-#define ONE_WIRE_BUS 27
+#define ONE_WIRE_BUS 33
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
@@ -94,13 +94,6 @@ void setup()
 
   while (!Serial)
     continue;
-
-  delay(1000);
-
-  Serial.println("go");
-  delay(1000);
-
-  // delay(1000);
 
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
@@ -241,9 +234,9 @@ void getTemp()
 void loop()
 {
 
-  // getTemp();
-  // delay(500);
-  // return;
+  getTemp();
+  delay(500);
+  return;
 
   // return;
 
