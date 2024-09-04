@@ -96,11 +96,12 @@ void setup()
     continue;
 
 
-  while(true){
-    Serial.println("go");
-    delay(1000);
-  }
-  return;
+  // while(true){
+  //   Serial.println("go");
+  //   delay(1000);
+  // }
+
+  // return;
   delay(1000);
 
   Serial.print("File: ");
