@@ -378,7 +378,7 @@ void updateDisplay(void *p)
     char timeString[20]; // Buffer for formatted time
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     //sprintf(timeString, "%4.1f\u00B0C", temperatureC);
-    sprintf(timeString, "%4.1f\u°C", temperatureC);
+    sprintf(timeString, "%4.1f°C", temperatureC);
 
     gfx->print(timeString);
 
