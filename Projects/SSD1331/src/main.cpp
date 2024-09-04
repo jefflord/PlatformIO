@@ -88,6 +88,18 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
 Servo myServo; // Create a Servo object
 
+void getTemp(void *parameter)
+{
+  while (true)
+  {
+    sensors.requestTemperatures();
+    temperatureC = sensors.getTempCByIndex(0);
+    Serial.print("temp: ");
+    Serial.println(temperatureC);
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -232,17 +244,7 @@ int angle = 0;
 bool dirUp = true;
 float temperatureC = 0;
 
-void getTemp(void *parameter)
-{
-  while (true)
-  {
-    sensors.requestTemperatures();
-    temperatureC = sensors.getTempCByIndex(0);
-    Serial.print("temp: ");
-    Serial.println(temperatureC);
-    vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
-  }
-}
+
 
 void loop()
 {
