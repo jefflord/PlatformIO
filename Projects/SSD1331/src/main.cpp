@@ -82,13 +82,6 @@ void getTemp(void *parameter)
 
 bool isTouchDown = false;
 
-void onTouch()
-{
-  isTouchDown = true;
-  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
-  Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
-}
-
 void delayedTask(void *parameter)
 {
   // Your delayed code here
@@ -96,6 +89,15 @@ void delayedTask(void *parameter)
   isTouchDown = false;
   vTaskDelete(NULL); // Delete the task after it's done
 }
+
+
+void onTouch()
+{
+  isTouchDown = true;
+  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
+  Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
+}
+
 
 void setup()
 {
