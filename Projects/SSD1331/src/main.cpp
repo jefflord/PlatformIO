@@ -132,7 +132,6 @@ void onTouch()
   }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
-  isTouchDown = false;
   sendValue = 2;
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
