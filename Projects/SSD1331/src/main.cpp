@@ -27,7 +27,7 @@
 Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
 Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 
-int switchPin = 4;
+#define switchPin 4
 
 #define TEST_PWM_RESOLUTION false
 
@@ -159,8 +159,8 @@ unsigned long elapsedTime;
 
 void loop()
 {
-  
-  //return;
+
+  // return;
 
   switchState = digitalRead(switchPin);
 
@@ -192,7 +192,7 @@ void loop()
     gfx->print(totalFrameCount);
 
     elapsedTime = micros() - startMicros;
-    delayMicroseconds(16666 - elapsedTime);
+    delayMicroseconds(16666 * 2 - elapsedTime);
     // delay(1000);
   }
   else
