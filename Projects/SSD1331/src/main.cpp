@@ -94,8 +94,12 @@ void taskFunction(void *pvParameters)
 {
   for (;;)
   {
+    
     Serial.printf("xQueueReceive 1\n!");
+    taskENTER_CRITICAL(&myMutex);
+    Serial.printf("xQueueReceive 1.b\n!");
     xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
+    taskEXIT_CRITICAL(&myMutex);
     Serial.printf("xQueueReceive 2\n!");
     // Perform your delayed action here
     delay(500);
