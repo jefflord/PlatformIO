@@ -96,7 +96,10 @@ void setup()
     continue;
 
 
-  Serial.println("go");
+  while(true){
+    Serial.println("go");
+    delay(1000);
+  }
   return;
   delay(1000);
 
