@@ -297,7 +297,7 @@ void pushServoButtonX(void *pvParameters)
   myServo.write(0);
   delay(750);
   myServo.write(90);
-  
+  delay(250);
   servoMoving = false;
   vTaskDelete(NULL);
 }
