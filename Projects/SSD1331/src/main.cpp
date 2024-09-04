@@ -120,8 +120,8 @@ void onTouch()
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
   // &myTaskHandle
 
-  taskENTER_CRITICAL(&myMutex);
-  //Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
+  // taskENTER_CRITICAL(&myMutex);
+  // Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
 
   sendValue = 2;
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
@@ -130,7 +130,7 @@ void onTouch()
   }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
-  taskEXIT_CRITICAL(&myMutex);
+  // taskEXIT_CRITICAL(&myMutex);
 }
 
 void displayTest(int delayTimeMs)
