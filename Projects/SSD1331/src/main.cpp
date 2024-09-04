@@ -343,7 +343,8 @@ String formatTime(unsigned long epochTime)
 
   // Format the result as hh:mm:ss AM/PM
   char timeString[12]; // Buffer for formatted time
-  sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
+  // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
+  sprintf(timeString, "%02d:%02d:%02d", hours, minutes, seconds, ampm.c_str());
 
   return String(timeString);
 }
@@ -374,7 +375,12 @@ void updateDisplay(void *p)
     gfx->setCursor(0, SET_CUR_TOP_Y);
 
     gfx->println(getTime());
-    gfx->print(temperatureC);
+
+    char timeString[6]; // Buffer for formatted time
+    // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
+    sprintf(timeString, "%4.1f", temperatureC);
+
+    gfx->print(timeString);
 
     vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
