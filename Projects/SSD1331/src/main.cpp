@@ -100,8 +100,7 @@ void setup()
   Serial.println("go");
   delay(1000);
 
-  return;
-  // delay(1000);
+    // delay(1000);
 
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
@@ -242,9 +241,9 @@ void getTemp()
 void loop()
 {
 
-  getTemp();
-  delay(500);
-  return;
+  // getTemp();
+  // delay(500);
+  // return;
 
   // return;
 
