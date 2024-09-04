@@ -115,17 +115,12 @@ void onTouch()
 
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
   // &myTaskHandle
-  isTouchDown = true;
-  xQueueSendFromISR(queue, &receivedValue, &xHigherPriorityTaskWoken);
 
-  // if (myTaskHandle == NULL)
-  // {
-  //   xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, &myTaskHandle); // Create the task
-  // }
-  // else
-  // {
-  //   vTaskSuspend(myTaskHandle);
-  // }
+  if (xQueueSendFromISR(queue, &receivedValue, &xHigherPriorityTaskWoken) == pdTRUE)
+  {
+    isTouchDown = true;
+  }
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void displayTest(int delayTimeMs)
