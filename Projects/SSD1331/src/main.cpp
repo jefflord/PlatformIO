@@ -100,8 +100,11 @@ void taskFunction(void *pvParameters)
     Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
     // if (receivedValue == 2)
     {
-      vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
-      isTouchDown = false;
+      if (isTouchDown)
+      {
+        vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
+        isTouchDown = false;
+      }
     }
   }
 }
