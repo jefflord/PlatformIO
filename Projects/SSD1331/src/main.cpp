@@ -132,16 +132,13 @@ void onTouch()
   }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
-  if (isTouchDown)
+  isTouchDown = false;
+  sendValue = 2;
+  if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
-    isTouchDown = false;
-    sendValue = 2;
-    if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
-    {
-      isTouchDown = true;
-    }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    isTouchDown = true;
   }
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
   taskEXIT_CRITICAL(&myMutex);
 }
