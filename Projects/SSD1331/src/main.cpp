@@ -293,9 +293,8 @@ void loop()
   startMicros = micros();
 
   touchValue = touchRead(TOUCH_PIN);
-
-  // Serial.print("touchValue");
-  // Serial.println(touchValue);
+  Serial.print("touchValue");
+  Serial.println(touchValue);
 
   if (switchState == LOW || isTouchDown || touchValue < 40)
   {
