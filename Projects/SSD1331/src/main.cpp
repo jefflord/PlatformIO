@@ -218,6 +218,10 @@ void setup()
     xTaskCreate(onTouchOffWatcher, "onTouch", 2048, NULL, 1, NULL);
     touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
   }
+  else
+  {
+    touchAttachInterrupt(TOUCH_PIN, pushServoButton, 40);
+  }
 
   auto i = 0;
   while (!true)
@@ -283,6 +287,14 @@ unsigned long elapsedTime;
 int angle = 0;
 bool dirUp = true;
 int touchValue = 0;
+
+void pushServoButton()
+{
+  myServo.write(150);
+  delay(500);
+  myServo.write(90);
+}
+
 void loop()
 {
 
@@ -296,7 +308,8 @@ void loop()
   Serial.print("touchValue");
   Serial.println(touchValue);
 
-  if (switchState == LOW || isTouchDown || touchValue < 40)
+  // isTouchDown || touchValue < 40
+  if (switchState == LOW)
   {
 
     // Serial.println(angle);
