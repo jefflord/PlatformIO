@@ -332,6 +332,7 @@ void updateDisplay(void *p)
   {
 
     auto startTime = millis();
+    gfx->fillRect(0, 0, 96, 64, BLACK);
     // char randomChar = (char)random(97, 127);
     gfx->setCursor(0, SET_CUR_TOP_Y);
     gfx->printf("%.1f", fps);
