@@ -172,23 +172,6 @@ bool dirUp = true;
 void loop()
 {
 
-  if (dirUp && angle >= 180)
-  {
-    dirUp = false;
-  }
-  else if (!dirUp && angle <= 0)
-  {
-    dirUp = true;
-  }
-  if (dirUp)
-  {
-    angle++;
-  }
-  else
-  {
-    angle--;
-  }
-
   // return;
 
   switchState = digitalRead(SWITCH_PIN);
@@ -198,6 +181,7 @@ void loop()
   if (switchState == LOW)
   {
 
+    updateAngle();
     myServo.write(angle);
 
     frameCount++;
@@ -231,5 +215,25 @@ void loop()
   else
   {
     delay(33);
+  }
+}
+
+void updateAngle()
+{
+  if (dirUp && angle >= 180)
+  {
+    dirUp = false;
+  }
+  else if (!dirUp && angle <= 0)
+  {
+    dirUp = true;
+  }
+  if (dirUp)
+  {
+    angle++;
+  }
+  else
+  {
+    angle--;
   }
 }
