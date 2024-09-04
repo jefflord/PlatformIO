@@ -97,6 +97,36 @@ void onTouch()
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
 }
 
+void displayTestx(int delayTimeMs)
+{
+
+  gfx->begin();
+  gfx->setTextSize(FONT_SIZE);
+  gfx->fillScreen(BLACK);
+
+  gfx->setCursor(2, SET_CUR_TOP_Y);
+
+  gfx->print("1");
+
+  delay(delayTimeMs);
+  gfx->setCursor(2, SET_CUR_TOP_Y);
+  gfx->print("12");
+
+  delay(delayTimeMs);
+  gfx->setCursor(2, SET_CUR_TOP_Y);
+  gfx->print("123");
+
+  delay(delayTimeMs);
+  gfx->setCursor(2, SET_CUR_TOP_Y);
+
+  gfx->print("1234");
+
+  delay(delayTimeMs);
+  gfx->fillScreen(BLACK);
+
+  gfx->drawRect(0, 0, 96, 64, WHITE);
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -202,36 +232,6 @@ void setup()
   );
 
   Serial.println("Setup Done");
-}
-
-void displayTestx(int delayTimeMs)
-{
-
-  gfx->begin();
-  gfx->setTextSize(FONT_SIZE);
-  gfx->fillScreen(BLACK);
-
-  gfx->setCursor(2, SET_CUR_TOP_Y);
-
-  gfx->print("1");
-
-  delay(delayTimeMs);
-  gfx->setCursor(2, SET_CUR_TOP_Y);
-  gfx->print("12");
-
-  delay(delayTimeMs);
-  gfx->setCursor(2, SET_CUR_TOP_Y);
-  gfx->print("123");
-
-  delay(delayTimeMs);
-  gfx->setCursor(2, SET_CUR_TOP_Y);
-
-  gfx->print("1234");
-
-  delay(delayTimeMs);
-  gfx->fillScreen(BLACK);
-
-  gfx->drawRect(0, 0, 96, 64, WHITE);
 }
 
 unsigned long lastTime = millis(); // Last recorded time
