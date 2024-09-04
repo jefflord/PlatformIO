@@ -358,25 +358,29 @@ String getTime()
   // return ((int64_t)timeClient->getEpochTime() * 1000);
 }
 
+String getDecimalPart(double number)
+{
+  char buffer[20]; // Buffer to store the formatted result
 
-String getDecimalPart(double number) {
-    char buffer[20];  // Buffer to store the formatted result
+  // Format the number to get only the decimal part (keeping two decimal places)
+  sprintf(buffer, "%.2f", number); // Adjust precision if needed (e.g., "%.2f")
 
-    // Format the number to get only the decimal part (keeping two decimal places)
-    sprintf(buffer, "%.2f", number);  // Adjust precision if needed (e.g., "%.2f")
+  // Find the position of the decimal point
+  char *decimalPoint = buffer;
+  while (*decimalPoint != '.' && *decimalPoint != '\0')
+  {
+    decimalPoint++;
+  }
 
-    // Find the position of the decimal point
-    char* decimalPoint = buffer;
-    while (*decimalPoint != '.' && *decimalPoint != '\0') {
-        decimalPoint++;
-    }
-
-    // Return the part after the decimal point
-    if (*decimalPoint == '.') {
-        return String(decimalPoint + 1);  // Skip the decimal point itself
-    } else {
-        return String("0");  // Return "0" if there is no decimal part
-    }
+  // Return the part after the decimal point
+  if (*decimalPoint == '.')
+  {
+    return String(decimalPoint + 1); // Skip the decimal point itself
+  }
+  else
+  {
+    return String("0"); // Return "0" if there is no decimal part
+  }
 }
 void updateDisplay(void *p)
 {
@@ -401,10 +405,16 @@ void updateDisplay(void *p)
 
     auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
     // sprintf(timeString, "%4.1f/", temperatureF);
-    sprintf(timeString, "%3.0f", temperatureF);
+    sprintf(timeString, "%2.0f", temperatureF);
     gfx->print(timeString);
+    gfx->setTextSize(FONT_SIZE - 1);
+    gfx->print(getDecimalPart(temperatureF));
+    gfx->setTextSize(FONT_SIZE);
 
-    gfx->setTextSize(FONT_SIZE - 1);    
+    temperatureF += 5.6;
+    sprintf(timeString, "%2.0f", temperatureF);
+    gfx->print(timeString);
+    gfx->setTextSize(FONT_SIZE - 1);
     gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
 
