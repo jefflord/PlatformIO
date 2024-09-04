@@ -216,7 +216,7 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
-  queue = xQueueCreate(1, sizeof(uint8_t));
+  queue = xQueueCreate(10, sizeof(uint8_t));
   xTaskCreate(taskFunction, "Task", 2048, NULL, 1, &myTaskHandle);
   touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
 
