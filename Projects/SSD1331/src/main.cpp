@@ -85,7 +85,7 @@ bool isTouchDown = false;
 void delayedTask(void *parameter)
 {
   // Your delayed code here
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   isTouchDown = false;
   vTaskDelete(NULL); // Delete the task after it's done
 }
