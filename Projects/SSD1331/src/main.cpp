@@ -125,15 +125,15 @@ void onTouch()
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
   {
     isTouchDown = true;
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    sendValue = 2;
+    if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
+    {
+      isTouchDown = true;
+    }
   }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
-  vTaskDelay(5 / portTICK_PERIOD_MS);
-  sendValue = 2;
-  if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
-  {
-    isTouchDown = true;
-  }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
   taskEXIT_CRITICAL(&myMutex);
