@@ -1,7 +1,7 @@
 /*
-3V3		
+3V3
 EN
-GND		
+GND
 GND
 GPIO01
 GPIO02
@@ -70,9 +70,10 @@ GPIO32	SERVO
 
 #define SERVO_PIN 32
 
-#define ONE_WIRE_BUS 4
+#define ONE_WIRE_BUS 1
 
 OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 #define SET_CUR_TOP_Y 8 * 2
 #define FONT_SIZE 2
@@ -108,6 +109,8 @@ void setup()
 
   myServo.attach(SERVO_PIN);
   myServo.write(0);
+
+  sensors.begin(); // Start the DS18B20 sensor
 
   if (TEST_PWM_RESOLUTION)
   {
@@ -220,9 +223,21 @@ unsigned long elapsedTime;
 
 int angle = 0;
 bool dirUp = true;
+float temperatureC = 0;
+
+void getTemp()
+{
+  sensors.requestTemperatures();
+  temperatureC = sensors.getTempCByIndex(0);
+  Serial.printf("temp %f\n", temperatureC);
+}
 
 void loop()
 {
+
+  getTemp();
+  delay(500);
+  return;
 
   // return;
 
