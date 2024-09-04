@@ -413,7 +413,7 @@ void updateDisplay(void *p)
 
     temperatureF += 5.6;
 
-    gfx->setCursor(gfx->getCursorX() + 10, gfx->getCursorY());
+    gfx->setCursor(gfx->getCursorX() + 20, gfx->getCursorY());
 
     sprintf(timeString, "%2.0f", temperatureF);
     gfx->print(timeString);
