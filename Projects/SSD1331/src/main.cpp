@@ -85,6 +85,19 @@ bool isTouchDown = false;
 void updateAngle();
 
 TaskHandle_t myTaskHandle = NULL;
+QueueHandle_t queue = NULL;
+
+void taskFunction(void *pvParameters)
+{
+  for (;;)
+  {
+    xQueueReceive(queue, NULL, portMAX_DELAY); // Wait for a message
+    // Perform your delayed action here
+    delay(500);
+    isTouchDown = false;
+  }
+}
+
 void delayedTask(void *parameter)
 {
   // Your delayed code here
@@ -98,6 +111,7 @@ void onTouch()
 
   // &myTaskHandle
   isTouchDown = true;
+  xQueueSendFromISR(queue, NULL, NULL);
 
   // if (myTaskHandle == NULL)
   // {
@@ -109,10 +123,6 @@ void onTouch()
   // }
 
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
-
-  vTaskDelay(100 / portTICK_PERIOD_MS);
-  isTouchDown = false;
-  Serial.printf("Touch detected done %d\n!", TOUCH_PIN);
 }
 
 void displayTestx(int delayTimeMs)
@@ -198,7 +208,10 @@ void setup()
   // gfx->setFont(u8g2_font_luBIS08_tf);   // not fixed-italics
   gfx->setFont(u8g2_font_t0_11_tr); // not fixed
 
+  queue = xQueueCreate(10, sizeof(uint8_t));
+  xTaskCreate(taskFunction, "Task", 2048, NULL, 1, &myTaskHandle);
   touchAttachInterrupt(TOUCH_PIN, onTouch, 40);
+
   auto i = 0;
   while (!true)
   {
