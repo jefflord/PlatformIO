@@ -381,13 +381,13 @@ void updateDisplay(void *p)
 
     auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
     //sprintf(timeString, "%4.1f/", temperatureF);
-    sprintf(timeString, "%4f", temperatureF);
-    gfx->setTextSize(FONT_SIZE - 1);
+    sprintf(timeString, "%4.0f", temperatureF);
     gfx->print(timeString);
 
-    sprintf(timeString, "%.1f", temperatureF);
-    gfx->setTextSize(FONT_SIZE);
+    gfx->setTextSize(FONT_SIZE - 1);
+    sprintf(timeString, "%0.1f", temperatureF);    
     gfx->print(timeString);
+    gfx->setTextSize(FONT_SIZE);
 
     
 
