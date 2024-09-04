@@ -83,8 +83,8 @@ void getTemp(void *parameter)
 bool isTouchDown = false;
 
 void updateAngle();
-//
-TaskHandle_t myTaskHandle = NULL;
+
+//TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t onTouchQueue = NULL;
 int sendValue;
 int receivedValue;
