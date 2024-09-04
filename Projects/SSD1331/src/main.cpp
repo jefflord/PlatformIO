@@ -70,8 +70,7 @@ GPIO32	SERVO
 
 #define SERVO_PIN 32
 
-#define ONE_WIRE_BUS 1
-
+#define ONE_WIRE_BUS 27
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
@@ -92,6 +91,7 @@ Servo myServo; // Create a Servo object
 void setup()
 {
   Serial.begin(115200);
+
   while (!Serial)
     continue;
 
