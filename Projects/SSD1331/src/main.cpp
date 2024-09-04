@@ -358,6 +358,20 @@ String getTime()
   // return ((int64_t)timeClient->getEpochTime() * 1000);
 }
 
+char* printDecimalPart(double number) {
+    char buffer[10];  // Buffer to store the result
+
+    // Format the number to get only the decimal part
+    sprintf(buffer, "%.2f", number);  // Keep two decimal places (you can adjust this)
+    
+    // Find the position of the decimal point
+    char* decimalPoint = buffer;
+    while (*decimalPoint != '.' && *decimalPoint != '\0') {
+        decimalPoint++;
+    }
+
+    return decimalPoint;    
+}
 void updateDisplay(void *p)
 {
   gfx->begin();
@@ -380,20 +394,17 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
 
     auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
-    //sprintf(timeString, "%4.1f/", temperatureF);
+    // sprintf(timeString, "%4.1f/", temperatureF);
     sprintf(timeString, "%4.0f", temperatureF);
     gfx->print(timeString);
 
-    gfx->setTextSize(FONT_SIZE - 1);
-    sprintf(timeString, "%0.1f", temperatureF);    
-    gfx->print(timeString);
+    gfx->setTextSize(FONT_SIZE - 1);    
+    gfx->print(printDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
 
-    
-
-    //sprintf(timeString, "%4.1f", temperatureF + 5.6);
-    //gfx->print(timeString);
-    // sprintf(timeString, "%4.1fC", temperatureC);
+    // sprintf(timeString, "%4.1f", temperatureF + 5.6);
+    // gfx->print(timeString);
+    //  sprintf(timeString, "%4.1fC", temperatureC);
 
     vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
