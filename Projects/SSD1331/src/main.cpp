@@ -126,11 +126,13 @@ void onTouch()
   {
     isTouchDown = true;
   }
-  else
-  {
-    isTouchDown = false;
-  }
+  // else
+  // {
+  //   isTouchDown = false;
+  // }
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
+  Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
 
   sendValue = 2;
   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
