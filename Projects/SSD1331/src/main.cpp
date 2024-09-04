@@ -87,6 +87,7 @@ void updateAngle();
 TaskHandle_t myTaskHandle = NULL;
 QueueHandle_t queue = NULL;
 int receivedValue;
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 void taskFunction(void *pvParameters)
 {
@@ -115,7 +116,7 @@ void onTouch()
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
   // &myTaskHandle
   isTouchDown = true;
-  xQueueSendFromISR(queue, NULL, NULL);
+  xQueueSendFromISR(queue, &receivedValue, &xHigherPriorityTaskWoken);
 
   // if (myTaskHandle == NULL)
   // {
