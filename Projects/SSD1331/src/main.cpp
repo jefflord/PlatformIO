@@ -367,9 +367,9 @@ String getDecimalPart(double number) {
 
     // Find the position of the decimal point
     char* decimalPoint = buffer;
-    // while (*decimalPoint != '.' && *decimalPoint != '\0') {
-    //     decimalPoint++;
-    // }
+    while (*decimalPoint != '.' && *decimalPoint != '\0') {
+        decimalPoint++;
+    }
 
     // Return the part after the decimal point
     if (*decimalPoint == '.') {
