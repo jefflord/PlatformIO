@@ -82,6 +82,8 @@ void getTemp(void *parameter)
 
 bool isTouchDown = false;
 
+void updateAngle();
+
 void delayedTask(void *parameter)
 {
   // Your delayed code here
