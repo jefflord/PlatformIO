@@ -379,7 +379,7 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
 
-    auto temperatureF = (temperatureC * (5 / 9)) + 32;
+    auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
     sprintf(timeString, "%4.1fC", temperatureF);
 
     gfx->print(timeString);
