@@ -98,7 +98,7 @@ void taskFunction(void *pvParameters)
     Serial.printf("xQueueReceive 1\n!");
     xQueueReceive(queue, &receivedValue, portMAX_DELAY); // Wait for a message
     Serial.printf("xQueueReceive 2 - %d\n!", receivedValue);
-    if (receivedValue == 2)
+    // if (receivedValue == 2)
     {
       vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
       isTouchDown = false;
@@ -121,19 +121,19 @@ void onTouch()
   // &myTaskHandle
 
   taskENTER_CRITICAL(&myMutex);
-  if (!isTouchDown)
-  {
-    sendValue = 1;
-    if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
-    {
-      isTouchDown = true;
-    }
-    // else
-    // {
-    //   isTouchDown = false;
-    // }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  }
+  // if (!isTouchDown)
+  // {
+  //   sendValue = 1;
+  //   if (xQueueSendFromISR(queue, &sendValue, &xHigherPriorityTaskWoken) == pdTRUE)
+  //   {
+  //     isTouchDown = true;
+  //   }
+  //   // else
+  //   // {
+  //   //   isTouchDown = false;
+  //   // }
+  //   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  // }
 
   Serial.printf("Touch detected on %s\n!", isTouchDown ? "true" : "false");
 
