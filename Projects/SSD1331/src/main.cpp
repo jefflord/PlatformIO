@@ -80,9 +80,21 @@ void getTemp(void *parameter)
   }
 }
 
+bool isTouchDown = false;
+
 void onTouch()
 {
+  isTouchDown = true;
+  xTaskCreate(delayedTask, "Delayed Task", 2048, NULL, 1, NULL); // Create the task
   Serial.printf("Touch detected on %d\n!", TOUCH_PIN);
+}
+
+void delayedTask(void *parameter)
+{
+  // Your delayed code here
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  isTouchDown = false;
+  vTaskDelete(NULL); // Delete the task after it's done
 }
 
 void setup()
@@ -241,7 +253,7 @@ void loop()
 
   startMicros = micros();
 
-  if (switchState == LOW)
+  if (switchState == LOW || isTouchDown)
   {
 
     Serial.println(angle);
