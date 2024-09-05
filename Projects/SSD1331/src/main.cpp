@@ -399,6 +399,11 @@ void updateDisplay(void *p)
   for (;;)
   {
 
+    while (servoMoving)
+    {
+      showClickAnimation(2);
+    }
+
     gfx->setTextColor(WHITE);
     auto startTime = millis();
     gfx->fillRect(0, 0, 96, 64, BLACK);
@@ -459,7 +464,7 @@ void showClickAnimation(int loopCount)
 
 void loop()
 {
-  showClickAnimation(2);
+  // showClickAnimation(2);
   return;
 
   switchState = digitalRead(SWITCH_PIN);
