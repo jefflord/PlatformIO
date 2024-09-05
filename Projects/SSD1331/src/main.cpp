@@ -300,6 +300,7 @@ int angle = 0;
 bool dirUp = true;
 int touchValue = 0;
 bool servoMoving = false;
+bool animationShowing = false;
 
 void pushServoButtonX(void *pvParameters)
 {
@@ -432,6 +433,10 @@ void updateDisplay(void *p)
     // Serial.println("showClickAnimation done!");
     //  continue;
     //}
+    if (animationShowing)
+    {
+      continue;
+    }
     taskENTER_CRITICAL(&screenLock);
 
     gfx->setTextColor(WHITE);
@@ -489,7 +494,9 @@ void updateDisplay(void *p)
 void showClickAnimation(void *p)
 {
   Serial.println("showClickAnimation");
-  int loopCount = 2;
+  int loopCount = 1;
+  animationShowing = true;
+
   taskENTER_CRITICAL(&screenLock);
   for (int i = 0; i < loopCount; i++)
   {
@@ -511,6 +518,7 @@ void showClickAnimation(void *p)
     }
   }
   taskEXIT_CRITICAL(&screenLock);
+  animationShowing = false;
   vTaskDelete(NULL);
 }
 
