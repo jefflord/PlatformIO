@@ -411,7 +411,7 @@ void updateDisplay(void *p)
     Serial.println(lastRun);
     Serial.println(millis());
     Serial.println(millis() - lastRun);
-    if (millis() - lastRun < 900)
+    if (millis() - lastRun >= 900)
     {
       Serial.println("Not updateDisplay!");
       vTaskDelay(300 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
