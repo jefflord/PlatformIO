@@ -173,6 +173,8 @@ void displayTest(int delayTimeMs)
   gfx->drawRect(0, 0, 96, 64, WHITE);
 }
 
+bool uploadingData = false;
+
 void fakeUpload(void *p)
 {
   int counter = 0;
@@ -434,7 +436,7 @@ int getSignal()
 }
 
 bool forceUpdate = false;
-bool uploadingData = false;
+
 
 void updateDisplay(void *p)
 {
