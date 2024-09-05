@@ -401,7 +401,7 @@ void updateDisplay(void *p)
 
     while (servoMoving)
     {
-      showClickAnimation(2);
+      showClickAnimation(1);
     }
 
     gfx->setTextColor(WHITE);
