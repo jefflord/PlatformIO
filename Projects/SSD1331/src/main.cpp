@@ -449,23 +449,23 @@ void updateDisplay(void *p)
 void showClickAnimation(int loopCount)
 {
 
-  Serial.print("FRAME_COUNT:");
-  Serial.println(FRAME_COUNT);
+  // Serial.print("FRAME_COUNT:");
+  // Serial.println(FRAME_COUNT);
 
   for (int i = 0; i < loopCount; i++)
   {
 
-    Serial.print("loopCount:");
-    Serial.print(i);
-    Serial.print("/");
-    Serial.println(loopCount);
+    // Serial.print("loopCount:");
+    // Serial.print(i);
+    // Serial.print("/");
+    // Serial.println(loopCount);
 
     for (int frame = 0; frame < FRAME_COUNT;)
     {
-      Serial.print("frame:");
-      Serial.print(frame);
-      Serial.print("/");
-      Serial.println(FRAME_COUNT);
+      // Serial.print("frame:");
+      // Serial.print(frame);
+      // Serial.print("/");
+      // Serial.println(FRAME_COUNT);
 
       gfx->fillScreen(BLACK);
       gfx->setTextColor(WHITE);
