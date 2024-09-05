@@ -400,7 +400,7 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  long loopDelayMs = 2000;
+  long loopDelayMs = 1000;
   // long lastRun = 0;
 
   double lastT1 = 0;
