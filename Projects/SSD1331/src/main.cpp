@@ -445,17 +445,17 @@ void updateDisplay(void *p)
 
       Serial.println(startTime);
       Serial.println((startTime % 3));
-      
-      if ((startTime % 3) == 0)
-      {
-        renderCloud();
-      }
 
       gfx->setTextColor(WHITE);
 
       gfx->fillRect(0, 0, 96, 64, BLACK);
       // char randomChar = (char)random(97, 127);
       gfx->setCursor(0, SET_CUR_TOP_Y + 16);
+
+      if ((startTime % 3) == 0)
+      {
+        renderCloud();
+      }
 
       gfx->println(getTime());
 
