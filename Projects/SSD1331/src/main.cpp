@@ -401,6 +401,7 @@ void updateDisplay(void *p)
   for (;;)
   {
 
+    auto startTime = millis();
     while (servoMoving)
     {
       showClickAnimation(1);
@@ -412,13 +413,14 @@ void updateDisplay(void *p)
     Serial.println(millis() - lastRun);
     if (millis() - lastRun < 900)
     {
-      return;
+      vTaskDelay(100 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      continue;
     }
     Serial.println("updateDisplay!");
     lastRun = millis();
 
     gfx->setTextColor(WHITE);
-    auto startTime = millis();
+
     gfx->fillRect(0, 0, 96, 64, BLACK);
     // char randomChar = (char)random(97, 127);
     gfx->setCursor(0, SET_CUR_TOP_Y + 16);
