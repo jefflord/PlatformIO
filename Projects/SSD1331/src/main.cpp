@@ -424,7 +424,7 @@ void updateDisplay(void *p)
     auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
     auto temperatureF2 = temperatureF1 + 5.6;
 
-    if (lastT1 != temperatureF1 || lastT2 != temperatureF2)
+    if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2)
     {
       forceUpdate = false;
       lastT1 = temperatureF1;
