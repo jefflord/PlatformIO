@@ -396,7 +396,8 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  auto lastRun = millis();
+  auto lastRun = 0;
+
   for (;;)
   {
 
@@ -405,10 +406,7 @@ void updateDisplay(void *p)
       showClickAnimation(1);
     }
 
-    auto currentMillis = millis();
-    auto diffMillis = currentMillis - lastRun;
-
-    if (diffMillis < 900)
+    if (millis() - lastRun < 900)
     {
       return;
     }
