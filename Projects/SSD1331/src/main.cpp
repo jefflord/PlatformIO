@@ -416,9 +416,13 @@ void updateDisplay(void *p)
 
     if (millis() - lastRun <= 2000)
     {
-      Serial.println("Not updateDisplay!");
-      Serial.println(loopDelayMs - (millis() - startTime));
-      vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      // Serial.println("Not updateDisplay!");
+      // Serial.println(loopDelayMs - (millis() - startTime));
+      // vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      if (loopDelayMs > (millis() - startTime))
+      {
+        Serial.println(loopDelayMs - (millis() - startTime));
+      }
       continue;
     }
     else
@@ -466,11 +470,10 @@ void updateDisplay(void *p)
     // gfx->print(timeString);
     //  sprintf(timeString, "%4.1fC", temperatureC);
 
-    auto m = millis();
-    Serial.println(m);
-    Serial.println(startTime);
-    Serial.println((m - startTime));
-    Serial.println(loopDelayMs - (m - startTime));
+    if (loopDelayMs > (millis() - startTime))
+    {
+      Serial.println(loopDelayMs - (millis() - startTime));
+    }
 
     vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
