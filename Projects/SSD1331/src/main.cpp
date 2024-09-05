@@ -455,7 +455,7 @@ void showClickAnimation(int loopCount)
   for (int i = 0; i < loopCount; i++)
   {
 
-    for (int frame = 0; frame < FRAME_COUNT; frame++)
+    for (int frame = 0; frame < FRAME_COUNT;)
     {
       Serial.print("frame:");
       Serial.print(frame);
