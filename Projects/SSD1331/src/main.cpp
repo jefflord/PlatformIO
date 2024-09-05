@@ -490,7 +490,7 @@ void showClickAnimation(void *p)
 {
   Serial.println("showClickAnimation");
   int loopCount = 2;
-  taskENTER_CRITICAL(&screenLock);
+  // taskENTER_CRITICAL(&screenLock);
   for (int i = 0; i < loopCount; i++)
   {
 
@@ -509,7 +509,7 @@ void showClickAnimation(void *p)
       }
     }
   }
-  taskEXIT_CRITICAL(&screenLock);
+  // taskEXIT_CRITICAL(&screenLock);
   vTaskDelete(NULL);
 }
 
