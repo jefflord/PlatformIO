@@ -396,12 +396,11 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  long loopDelayMs = 100;
+  long loopDelayMs = 33;
   long lastRun = 0;
 
   for (;;)
   {
-
     auto startTime = millis();
     while (servoMoving)
     {
@@ -409,16 +408,8 @@ void updateDisplay(void *p)
       Serial.println("showClickAnimation done!");
     }
 
-    // Serial.println("updateDisplay!");
-    // Serial.println(lastRun);
-    // Serial.println(millis());
-    // Serial.println(millis() - lastRun);
-
-    if (millis() - lastRun <= 2000)
+    if (millis() - lastRun <= 900)
     {
-      // Serial.println("Not updateDisplay!");
-      // Serial.println(loopDelayMs - (millis() - startTime));
-      // vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
       if (loopDelayMs > (millis() - startTime))
       {
         Serial.println(loopDelayMs - (millis() - startTime));
