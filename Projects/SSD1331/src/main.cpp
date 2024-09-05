@@ -412,66 +412,52 @@ void updateDisplay(void *p)
     {
       continue;
     }
-    taskENTER_CRITICAL(&screenLock);
 
-    gfx->setTextColor(WHITE);
-
-    gfx->fillRect(0, 0, 96, 64, BLACK);
-    // char randomChar = (char)random(97, 127);
-    gfx->setCursor(0, SET_CUR_TOP_Y + 16);
-
-    gfx->println(getTime());
-
-    gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
-
-    char timeString[20]; // Buffer for formatted time
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
 
     auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
     auto temperatureF2 = temperatureF1 += 5.6;
 
-    // if (lastT1 == temperatureF1 && lastT2 == temperatureF2)
-    // {
-    //   vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
-    //   continue;
-    // }
+    if (lastT1 != temperatureF1 || lastT2 != temperatureF2)
+    {
+      lastT1 = temperatureF1;
+      lastT2 = temperatureF2;
 
-    lastT1 = temperatureF1;
-    lastT2 = temperatureF2;
+      taskENTER_CRITICAL(&screenLock);
 
-    // sprintf(timeString, "%4.1f/", temperatureF);
-    gfx->setTextColor(BLUE);
-    sprintf(timeString, "%2.0f", temperatureF1);
-    gfx->print(timeString);
-    gfx->setTextSize(FONT_SIZE - 1);
-    gfx->print(getDecimalPart(temperatureF1));
-    gfx->setTextSize(FONT_SIZE);
+      gfx->setTextColor(WHITE);
 
-    gfx->setCursor(gfx->getCursorX() + 22, gfx->getCursorY());
+      gfx->fillRect(0, 0, 96, 64, BLACK);
+      // char randomChar = (char)random(97, 127);
+      gfx->setCursor(0, SET_CUR_TOP_Y + 16);
 
-    gfx->setTextColor(GREEN);
-    sprintf(timeString, "%2.0f", temperatureF2);
-    gfx->print(timeString);
-    gfx->setTextSize(FONT_SIZE - 1);
-    gfx->print(getDecimalPart(temperatureF2));
-    gfx->setTextSize(FONT_SIZE);
+      gfx->println(getTime());
 
-    taskEXIT_CRITICAL(&screenLock);
-    // sprintf(timeString, "%4.1f", temperatureF + 5.6);
-    // gfx->print(timeString);
-    //  sprintf(timeString, "%4.1fC", temperatureC);
+      gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
-    // if (loopDelayMs > (millis() - startTime))
-    // {
-    //   // no delay needed
-    //   // Serial.println(loopDelayMs - (millis() - startTime));
-    // }
-    // else
-    // {
+      char timeString[20]; // Buffer for formatted time
 
-    // }
-    vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      // sprintf(timeString, "%4.1f/", temperatureF);
+      gfx->setTextColor(BLUE);
+      sprintf(timeString, "%2.0f", temperatureF1);
+      gfx->print(timeString);
+      gfx->setTextSize(FONT_SIZE - 1);
+      gfx->print(getDecimalPart(temperatureF1));
+      gfx->setTextSize(FONT_SIZE);
+
+      gfx->setCursor(gfx->getCursorX() + 22, gfx->getCursorY());
+
+      gfx->setTextColor(GREEN);
+      sprintf(timeString, "%2.0f", temperatureF2);
+      gfx->print(timeString);
+      gfx->setTextSize(FONT_SIZE - 1);
+      gfx->print(getDecimalPart(temperatureF2));
+      gfx->setTextSize(FONT_SIZE);
+      taskEXIT_CRITICAL(&screenLock);
+    }
+
+        vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
 
