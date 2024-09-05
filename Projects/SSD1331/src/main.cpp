@@ -173,6 +173,25 @@ void displayTest(int delayTimeMs)
   gfx->drawRect(0, 0, 96, 64, WHITE);
 }
 
+void fakeUpload(void *p)
+{
+  int counter = 0;
+  for (;;)
+  {
+
+    if ((counter++ & 5) == 0)
+    {
+      uploadingData = true;
+      vTaskDelay(4000 / portTICK_PERIOD_MS);
+      uploadingData = false;
+    }
+    else
+    {
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -296,6 +315,15 @@ void setup()
       NULL             // Handle to the task (not used here)
   );
 
+  xTaskCreate(
+      fakeUpload,   // Function to run on the new thread
+      "fakeUpload", // Name of the task (for debugging)
+      8192,         // Stack size (in bytes)
+      NULL,         // Parameter passed to the task
+      1,            // Priority (0-24, higher number means higher priority)
+      NULL          // Handle to the task (not used here)
+  );
+
   Serial.println("Setup Done");
 }
 
@@ -406,6 +434,7 @@ int getSignal()
 }
 
 bool forceUpdate = false;
+bool uploadingData = false;
 
 void updateDisplay(void *p)
 {
@@ -435,7 +464,7 @@ void updateDisplay(void *p)
     auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
     auto temperatureF2 = temperatureF1 + 5.6;
 
-    if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2)
+    if (forceUpdate || uploadingData || lastT1 != temperatureF1 || lastT2 != temperatureF2)
     {
       forceUpdate = false;
       lastT1 = temperatureF1;
@@ -443,16 +472,13 @@ void updateDisplay(void *p)
 
       taskENTER_CRITICAL(&screenLock);
 
-      Serial.println(startTime);
-      Serial.println((startTime % 3));
-
       gfx->setTextColor(WHITE);
 
       gfx->fillRect(0, 0, 96, 64, BLACK);
       // char randomChar = (char)random(97, 127);
       gfx->setCursor(0, SET_CUR_TOP_Y + 16);
 
-      if ((startTime % 3) == 0)
+      if (uploadingData)
       {
         renderCloud();
       }
