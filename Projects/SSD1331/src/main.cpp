@@ -406,6 +406,7 @@ void updateDisplay(void *p)
     while (servoMoving)
     {
       showClickAnimation(1);
+      Serial.println("showClickAnimation done!");
     }
 
     // Serial.println("updateDisplay!");
