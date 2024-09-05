@@ -303,6 +303,8 @@ bool servoMoving = false;
 
 void pushServoButtonX(void *pvParameters)
 {
+  xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
+  
   servoMoving = true;
 
   myServo.write(0);
@@ -423,13 +425,13 @@ void updateDisplay(void *p)
 
     // lastRun = millis();
 
-    while (servoMoving)
-    {
-      xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
-      // showClickAnimation(1);
-      // Serial.println("showClickAnimation done!");
-      continue;
-    }
+    // while (servoMoving)
+    //{
+
+    // showClickAnimation(1);
+    // Serial.println("showClickAnimation done!");
+    //  continue;
+    //}
     taskENTER_CRITICAL(&screenLock);
 
     gfx->setTextColor(WHITE);
