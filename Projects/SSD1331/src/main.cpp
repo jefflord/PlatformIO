@@ -446,10 +446,9 @@ void updateDisplay(void *p)
   }
 }
 
-int frame = 0;
-
 void showClickAnimation(int loopCount)
 {
+  int frame = 0;
   for (int i = 0; i < loopCount; i++)
   {
     gfx->fillScreen(BLACK);
