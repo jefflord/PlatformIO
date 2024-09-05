@@ -394,6 +394,8 @@ int getSignal()
   return 78;
 }
 
+bool forceUpdate = false;
+
 void updateDisplay(void *p)
 {
   gfx->begin();
@@ -412,7 +414,7 @@ void updateDisplay(void *p)
     if (animationShowing)
     {
       vTaskDelay(50 / portTICK_PERIOD_MS);
-      lastT1 = -999;
+      forceUpdate = true;
       continue;
     }
 
@@ -424,6 +426,7 @@ void updateDisplay(void *p)
 
     if (lastT1 != temperatureF1 || lastT2 != temperatureF2)
     {
+      forceUpdate = false;
       lastT1 = temperatureF1;
       lastT2 = temperatureF2;
 
