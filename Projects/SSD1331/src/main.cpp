@@ -431,11 +431,11 @@ void updateDisplay(void *p)
     auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
     auto temperatureF2 = temperatureF1 += 5.6;
 
-    if (lastT1 == temperatureF1 && lastT2 == temperatureF2)
-    {
-      vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
-      continue;
-    }
+    // if (lastT1 == temperatureF1 && lastT2 == temperatureF2)
+    // {
+    //   vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+    //   continue;
+    // }
 
     lastT1 = temperatureF1;
     lastT2 = temperatureF2;
