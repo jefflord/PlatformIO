@@ -442,16 +442,24 @@ void updateDisplay(void *p)
 }
 
 int frame = 0;
+
+void showClickAnimation(int loopCount)
+{
+  for (int i = 0; i < loopCount; i++)
+  {
+    gfx->fillScreen(BLACK);
+    gfx->setTextColor(WHITE);
+    // gfx->bl
+    gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
+    // display.display();
+    frame = (frame + 1) % FRAME_COUNT;
+    delay(FRAME_DELAY);
+  }
+}
+
 void loop()
 {
-
-  gfx->fillScreen(BLACK);
-  gfx->setTextColor(WHITE);
-  // gfx->bl
-  gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
-  // display.display();
-  frame = (frame + 1) % FRAME_COUNT;
-  delay(FRAME_DELAY);
+  showClickAnimation(2);
   return;
 
   switchState = digitalRead(SWITCH_PIN);
