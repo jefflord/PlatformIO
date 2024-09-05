@@ -475,10 +475,13 @@ void updateDisplay(void *p)
 
     if (loopDelayMs > (millis() - startTime))
     {
-      Serial.println(loopDelayMs - (millis() - startTime));
+      // no delay needed
+      // Serial.println(loopDelayMs - (millis() - startTime));
     }
-
-    vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+    else
+    {
+      vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+    }
   }
 }
 
