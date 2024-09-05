@@ -402,37 +402,12 @@ void updateDisplay(void *p)
   long loopDelayMs = 1000;
   // long lastRun = 0;
 
+  double lastT1 = 0;
+  double lastT2 = 0;
+
   for (;;)
   {
     auto startTime = millis();
-    // while (servoMoving)
-    // {
-    //   showClickAnimation(1);
-    //   Serial.println("showClickAnimation done!");
-    // }
-
-    // if (millis() - lastRun <= 1000)
-    // {
-    //   if (loopDelayMs > (millis() - startTime))
-    //   {
-    //     Serial.println(loopDelayMs - (millis() - startTime));
-    //   }
-    //   continue;
-    // }
-    // else
-    // {
-    //   Serial.println("updateDisplay!");
-    // }
-
-    // lastRun = millis();
-
-    // while (servoMoving)
-    //{
-
-    // showClickAnimation(1);
-    // Serial.println("showClickAnimation done!");
-    //  continue;
-    //}
     if (animationShowing)
     {
       continue;
@@ -453,24 +428,33 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
 
-    auto temperatureF = (temperatureC * (9.0 / 5.0)) + 32;
+    auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
+    auto temperatureF2 = temperatureF1 += 5.6;
+
+    if (lastT1 == temperatureF1 && lastT2 == temperatureF2)
+    {
+      vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      continue;
+    }
+
+    lastT1 = temperatureF1;
+    lastT2 = temperatureF2;
+
     // sprintf(timeString, "%4.1f/", temperatureF);
     gfx->setTextColor(BLUE);
-    sprintf(timeString, "%2.0f", temperatureF);
+    sprintf(timeString, "%2.0f", temperatureF1);
     gfx->print(timeString);
     gfx->setTextSize(FONT_SIZE - 1);
-    gfx->print(getDecimalPart(temperatureF));
+    gfx->print(getDecimalPart(temperatureF1));
     gfx->setTextSize(FONT_SIZE);
-
-    temperatureF += 5.6;
 
     gfx->setCursor(gfx->getCursorX() + 22, gfx->getCursorY());
 
     gfx->setTextColor(GREEN);
-    sprintf(timeString, "%2.0f", temperatureF);
+    sprintf(timeString, "%2.0f", temperatureF2);
     gfx->print(timeString);
     gfx->setTextSize(FONT_SIZE - 1);
-    gfx->print(getDecimalPart(temperatureF));
+    gfx->print(getDecimalPart(temperatureF2));
     gfx->setTextSize(FONT_SIZE);
 
     taskEXIT_CRITICAL(&screenLock);
