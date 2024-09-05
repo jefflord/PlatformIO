@@ -411,7 +411,8 @@ void updateDisplay(void *p)
     Serial.println(lastRun);
     Serial.println(millis());
     Serial.println(millis() - lastRun);
-    if (millis() - lastRun >= 900)
+    
+    if (millis() - lastRun <= 2000)
     {
       Serial.println("Not updateDisplay!");
       vTaskDelay(300 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
@@ -421,7 +422,7 @@ void updateDisplay(void *p)
     {
       Serial.println("updateDisplay!");
     }
-    Serial.println("updateDisplay!");
+  
     lastRun = millis();
 
     gfx->setTextColor(WHITE);
