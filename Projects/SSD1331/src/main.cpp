@@ -32,6 +32,7 @@ VIN
 
 */
 #include <Arduino.h>
+#include <bmp.h>
 #include <SPI.h>
 #include <ESP32Servo.h>
 #include <U8g2lib.h>
@@ -275,14 +276,14 @@ void setup()
       NULL       // Handle to the task (not used here)
   );
 
-  xTaskCreate(
-      updateDisplay,   // Function to run on the new thread
-      "updateDisplay", // Name of the task (for debugging)
-      8192,            // Stack size (in bytes)
-      NULL,            // Parameter passed to the task
-      1,               // Priority (0-24, higher number means higher priority)
-      NULL             // Handle to the task (not used here)
-  );
+  // xTaskCreate(
+  //     updateDisplay,   // Function to run on the new thread
+  //     "updateDisplay", // Name of the task (for debugging)
+  //     8192,            // Stack size (in bytes)
+  //     NULL,            // Parameter passed to the task
+  //     1,               // Priority (0-24, higher number means higher priority)
+  //     NULL             // Handle to the task (not used here)
+  // );
 
   Serial.println("Setup Done");
 }
@@ -398,7 +399,6 @@ void updateDisplay(void *p)
   for (;;)
   {
 
-    
     gfx->setTextColor(WHITE);
     auto startTime = millis();
     gfx->fillRect(0, 0, 96, 64, BLACK);
@@ -407,7 +407,7 @@ void updateDisplay(void *p)
 
     gfx->println(getTime());
 
-    gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 10);
+    gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
     char timeString[20]; // Buffer for formatted time
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
@@ -441,9 +441,15 @@ void updateDisplay(void *p)
   }
 }
 
+int frame = 0;
 void loop()
 {
 
+  // gfx->bl
+  gfx->drawBitmap(48, 16, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, 1);
+  // display.display();
+  frame = (frame + 1) % FRAME_COUNT;
+  delay(FRAME_DELAY);
   return;
 
   switchState = digitalRead(SWITCH_PIN);
