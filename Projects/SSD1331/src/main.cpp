@@ -411,6 +411,8 @@ void updateDisplay(void *p)
     auto startTime = millis();
     if (animationShowing)
     {
+      vTaskDelay(50 / portTICK_PERIOD_MS);
+      lastT1 = -999;
       continue;
     }
 
