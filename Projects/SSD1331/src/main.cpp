@@ -423,8 +423,15 @@ void updateDisplay(void *p)
 
     // lastRun = millis();
 
+    while (servoMoving)
+    {
+      xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
+      // showClickAnimation(1);
+      // Serial.println("showClickAnimation done!");
+      continue;
+    }
     taskENTER_CRITICAL(&screenLock);
-    taskEXIT_CRITICAL(&screenLock);
+
     gfx->setTextColor(WHITE);
 
     gfx->fillRect(0, 0, 96, 64, BLACK);
@@ -473,9 +480,9 @@ void updateDisplay(void *p)
   }
 }
 
-void showClickAnimation(int loopCount)
+void showClickAnimation(void *p)
 {
-
+  int loopCount = 1;
   taskENTER_CRITICAL(&screenLock);
   // Serial.print("FRAME_COUNT:");
   // Serial.println(FRAME_COUNT);
