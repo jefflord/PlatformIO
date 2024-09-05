@@ -132,9 +132,10 @@ void onTouch()
   // taskEXIT_CRITICAL(&myMutex);
 }
 
-void renderCloud()
+void renderUploadIcon()
 {
-  gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
+  // gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
+  gfx->drawBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE, BLACK);
 }
 
 void displayTest(int delayTimeMs)
@@ -317,14 +318,14 @@ void setup()
       NULL             // Handle to the task (not used here)
   );
 
-  // xTaskCreate(
-  //     fakeUpload,   // Function to run on the new thread
-  //     "fakeUpload", // Name of the task (for debugging)
-  //     8192,         // Stack size (in bytes)
-  //     NULL,         // Parameter passed to the task
-  //     1,            // Priority (0-24, higher number means higher priority)
-  //     NULL          // Handle to the task (not used here)
-  // );
+  xTaskCreate(
+      fakeUpload,   // Function to run on the new thread
+      "fakeUpload", // Name of the task (for debugging)
+      8192,         // Stack size (in bytes)
+      NULL,         // Parameter passed to the task
+      1,            // Priority (0-24, higher number means higher priority)
+      NULL          // Handle to the task (not used here)
+  );
 
   Serial.println("Setup Done");
 }
@@ -481,7 +482,7 @@ void updateDisplay(void *p)
 
       if (uploadingData)
       {
-        renderCloud();
+        renderUploadIcon();
       }
 
       gfx->println(getTime());
