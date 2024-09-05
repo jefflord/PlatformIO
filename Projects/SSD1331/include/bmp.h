@@ -1,8 +1,7 @@
 #include <Arduino.h>
 
 
-
-#define FRAME_DELAY (42)
+#define FRAME_DELAY (42-12)
 #define FRAME_WIDTH (32)
 #define FRAME_HEIGHT (32)
 #define FRAME_COUNT (sizeof(frames) / sizeof(frames[0]))
