@@ -396,8 +396,8 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  auto loopDelayMs = 100;
-  auto lastRun = 0;
+  long loopDelayMs = 100;
+  long lastRun = 0;
 
   for (;;)
   {
