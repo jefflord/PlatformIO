@@ -135,6 +135,11 @@ void onTouch()
 void displayTest(int delayTimeMs)
 {
 
+  gfx->begin();
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(WHITE);
+  gfx->drawBitmap((96 / 2) - (30 / 2), 8, epd_bitmap_icons8_upload_to_the_cloud_24, FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
+
   return;
   gfx->begin();
   gfx->setTextSize(FONT_SIZE);
@@ -266,6 +271,7 @@ void setup()
   }
 
   displayTest(100);
+  return;
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -499,6 +505,7 @@ void showClickAnimation(void *p)
 
 void loop()
 {
+
   // showClickAnimation(2);
   return;
 
