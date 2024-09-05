@@ -465,6 +465,7 @@ void updateDisplay(void *p)
     // gfx->print(timeString);
     //  sprintf(timeString, "%4.1fC", temperatureC);
 
+    Serial.println(loopDelayMs - (millis() - startTime));
     vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
