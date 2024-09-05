@@ -448,16 +448,19 @@ void updateDisplay(void *p)
 
 void showClickAnimation(int loopCount)
 {
-  int frame = 0;
+  
   for (int i = 0; i < loopCount; i++)
   {
-    gfx->fillScreen(BLACK);
-    gfx->setTextColor(WHITE);
-    // gfx->bl
-    gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
-    // display.display();
-    frame = (frame + 1) % FRAME_COUNT;
-    delay(FRAME_DELAY);
+    for (int frame = 0; frame < FRAME_COUNT; frame++)
+    {
+      gfx->fillScreen(BLACK);
+      gfx->setTextColor(WHITE);
+      // gfx->bl
+      gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
+      // display.display();
+      frame = (frame + 1) % FRAME_COUNT;
+      delay(FRAME_DELAY);
+    }
   }
 }
 
