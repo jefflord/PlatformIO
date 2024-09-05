@@ -406,10 +406,15 @@ void updateDisplay(void *p)
       showClickAnimation(1);
     }
 
+    Serial.println("updateDisplay!");
+    Serial.println(lastRun);
+    Serial.println(millis());
+    Serial.println(millis() - lastRun);
     if (millis() - lastRun < 900)
     {
       return;
     }
+    Serial.println("updateDisplay!");
     lastRun = millis();
 
     gfx->setTextColor(WHITE);
