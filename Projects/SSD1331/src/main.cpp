@@ -138,7 +138,7 @@ void displayTest(int delayTimeMs)
   gfx->begin();
   gfx->fillScreen(BLACK);
   gfx->setTextColor(WHITE);
-  gfx->drawBitmap((96 / 2) - (30 / 2), 8, epd_bitmap_icons8_upload_to_the_cloud_24, FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
+  gfx->drawBitmap((96 / 2) - (30 / 2), 8, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
 
   return;
   gfx->begin();
