@@ -408,7 +408,7 @@ void updateDisplay(void *p)
       Serial.println("showClickAnimation done!");
     }
 
-    if (millis() - lastRun <= 900)
+    if (millis() - lastRun <= 1000)
     {
       if (loopDelayMs > (millis() - startTime))
       {
