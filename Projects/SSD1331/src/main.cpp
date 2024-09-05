@@ -75,8 +75,8 @@ void getTemp(void *parameter)
   {
     sensors.requestTemperatures();
     temperatureC = sensors.getTempCByIndex(0);
-    Serial.print("temp: ");
-    Serial.println(temperatureC);
+    // Serial.print("temp: ");
+    // Serial.println(temperatureC);
     vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
