@@ -473,8 +473,8 @@ void showClickAnimation(int loopCount)
       gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
       // display.display();
       frame = (frame + 1) % FRAME_COUNT;
-      delay(FRAME_DELAY);
-      if (frame >= FRAME_COUNT / 2)
+      delay(FRAME_DELAY / 2);
+      if (frame >= FRAME_COUNT)
       {
         break;
       }
