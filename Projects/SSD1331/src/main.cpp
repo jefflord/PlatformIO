@@ -135,7 +135,9 @@ void onTouch()
 void renderUploadIcon()
 {
   // gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
-  gfx->drawBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE, BLACK);
+  gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24_Swap, 24, 24, WHITE, BLACK);
+
+  // gfx->drawBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE, BLACK);
 }
 
 void displayTest(int delayTimeMs)
