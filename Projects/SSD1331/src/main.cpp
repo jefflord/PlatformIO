@@ -448,7 +448,7 @@ void loop()
   gfx->fillScreen(BLACK);
   gfx->setTextColor(WHITE);
   // gfx->bl
-  gfx->drawBitmap(48, 16, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, 1);
+  gfx->drawBitmap(48, 16, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, BLACK, WHITE);
   // display.display();
   frame = (frame + 1) % FRAME_COUNT;
   delay(FRAME_DELAY);
