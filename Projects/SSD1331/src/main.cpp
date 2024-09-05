@@ -474,7 +474,7 @@ void showClickAnimation(int loopCount)
       // display.display();
       frame = (frame + 1) % FRAME_COUNT;
       delay(FRAME_DELAY);
-      if (frame == 0)
+      if (frame >= FRAME_COUNT / 2)
       {
         break;
       }
