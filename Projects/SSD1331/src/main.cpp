@@ -485,7 +485,7 @@ void updateDisplay(void *p)
 void showClickAnimation(void *p)
 {
   int loopCount = 1;
-  // taskENTER_CRITICAL(&screenLock);
+  taskENTER_CRITICAL(&screenLock);
   for (int i = 0; i < loopCount; i++)
   {
 
@@ -496,14 +496,16 @@ void showClickAnimation(void *p)
       gfx->setTextColor(WHITE);
       gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
       frame = (frame + 1) % FRAME_COUNT;
-      delay(FRAME_DELAY / 2);
+      // delay(FRAME_DELAY / 2);
+      vTaskDelay((FRAME_DELAY / 2) / portTICK_PERIOD_MS); // Delay for 10ms
       if (frame == 0)
       {
         break;
       }
     }
   }
-  // taskEXIT_CRITICAL(&screenLock);
+  taskEXIT_CRITICAL(&screenLock);
+  vTaskDelete(NULL);
 }
 
 void loop()
