@@ -445,6 +445,8 @@ int frame = 0;
 void loop()
 {
 
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(WHITE);
   // gfx->bl
   gfx->drawBitmap(48, 16, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, 1);
   // display.display();
