@@ -455,6 +455,11 @@ void showClickAnimation(int loopCount)
   for (int i = 0; i < loopCount; i++)
   {
 
+    Serial.print("loopCount:");
+    Serial.print(i);
+    Serial.print("/");
+    Serial.println(loopCount);
+
     for (int frame = 0; frame < FRAME_COUNT;)
     {
       Serial.print("frame:");
