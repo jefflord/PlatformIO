@@ -6,6 +6,7 @@
 #define FRAME_COUNT (sizeof(frames) / sizeof(frames[0]))
 
 void showClickAnimation(void *p);
+bool uploadingData = false;
 
 const byte PROGMEM frames[][128] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 27, 0, 0, 0, 17, 0, 0, 0, 17, 0, 0, 0, 17, 0, 0, 0, 17, 0, 0, 0, 17, 0, 0, 0, 17, 0, 0, 0, 17, 192, 0, 0, 17, 254, 0, 0, 17, 51, 192, 0, 17, 51, 224, 0, 17, 19, 32, 14, 16, 2, 32, 9, 16, 0, 32, 24, 144, 0, 32, 8, 112, 0, 32, 4, 48, 0, 32, 2, 16, 0, 32, 1, 0, 0, 32, 0, 128, 0, 32, 0, 64, 0, 32, 0, 32, 0, 32, 0, 16, 0, 96, 0, 12, 0, 192, 0, 7, 131, 128, 0, 0, 254, 0, 0, 0, 0, 0},
@@ -43,6 +44,8 @@ https://javl.github.io/image2cpp/
     Code output format: Arduino code
     Draw mode:          Horizontal - 1 bit per pixel
     Swap bits in byte:  Yes
+
+    Use with Arduino_GFX_Library drawXBitmap
 */
 
 // 'icons8-upload-to-the-cloud-24', 24x24px

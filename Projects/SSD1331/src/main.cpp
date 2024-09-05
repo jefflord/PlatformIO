@@ -132,14 +132,27 @@ void onTouch()
   // taskEXIT_CRITICAL(&myMutex);
 }
 
-void renderUploadIcon()
+void renderUploadIcon(void *p)
 {
-  // gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
-  // gfx->drawXBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24_swap, 24, 24, WHITE);
 
-  gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
+  while (true)
+  {
+    while (uploadingData)
+    {
 
-  //
+      taskENTER_CRITICAL(&screenLock);
+      gfx->fillRect(96 - 13, 0, 13, 13, BLACK);
+      gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
+      taskEXIT_CRITICAL(&screenLock);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+      taskENTER_CRITICAL(&screenLock);
+      gfx->fillRect(96 - 13, 0, 13, 13, BLACK);
+      taskEXIT_CRITICAL(&screenLock);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+    vTaskDelay(33 / portTICK_PERIOD_MS);
+  }
+  // vTaskDelete(NULL);
 }
 
 void displayTest(int delayTimeMs)
@@ -148,7 +161,8 @@ void displayTest(int delayTimeMs)
   gfx->begin();
   gfx->fillScreen(BLACK);
   gfx->setTextColor(WHITE);
-  gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
+  // gfx->drawXBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24_swap, 24, 24, WHITE);
+  gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
 
   return;
   gfx->begin();
@@ -178,18 +192,16 @@ void displayTest(int delayTimeMs)
   gfx->drawRect(0, 0, 96, 64, WHITE);
 }
 
-bool uploadingData = false;
-
 void fakeUpload(void *p)
 {
   int counter = 0;
   for (;;)
   {
 
-    if ((counter++ & 5) == 0)
+    if ((counter++ & 8) == 0)
     {
       uploadingData = true;
-      vTaskDelay(4000 / portTICK_PERIOD_MS);
+      vTaskDelay(2500 / portTICK_PERIOD_MS);
       uploadingData = false;
     }
     else
@@ -331,6 +343,8 @@ void setup()
       NULL          // Handle to the task (not used here)
   );
 
+  xTaskCreate(renderUploadIcon, "renderUploadIcon", 2048, NULL, 1, NULL);
+
   Serial.println("Setup Done");
 }
 
@@ -470,7 +484,7 @@ void updateDisplay(void *p)
     auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
     auto temperatureF2 = temperatureF1 + 5.6;
 
-    if (forceUpdate || uploadingData || lastT1 != temperatureF1 || lastT2 != temperatureF2)
+    if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2)
     {
       forceUpdate = false;
       lastT1 = temperatureF1;
@@ -480,14 +494,14 @@ void updateDisplay(void *p)
 
       gfx->setTextColor(WHITE);
 
-      gfx->fillRect(0, 0, 96, 64, BLACK);
+      gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
       // char randomChar = (char)random(97, 127);
       gfx->setCursor(0, SET_CUR_TOP_Y + 16);
 
-      if (uploadingData)
-      {
-        renderUploadIcon();
-      }
+      // if (uploadingData)
+      // {
+      //   renderUploadIcon();
+      // }
 
       gfx->println(getTime());
 
@@ -543,6 +557,7 @@ void showClickAnimation(void *p)
       }
     }
   }
+  gfx->fillScreen(BLACK);
   taskEXIT_CRITICAL(&screenLock);
   animationShowing = false;
   vTaskDelete(NULL);
