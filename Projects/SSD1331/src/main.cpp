@@ -91,7 +91,7 @@ void updateDisplay(void *p);
 QueueHandle_t onTouchQueue = NULL;
 
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-// portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE screenLock = portMUX_INITIALIZER_UNLOCKED;
 void onTouchOffWatcher(void *pvParameters)
 {
   int receivedValue;
@@ -396,33 +396,35 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  long loopDelayMs = 33;
-  long lastRun = 0;
+  long loopDelayMs = 1000;
+  // long lastRun = 0;
 
   for (;;)
   {
     auto startTime = millis();
-    while (servoMoving)
-    {
-      showClickAnimation(1);
-      Serial.println("showClickAnimation done!");
-    }
+    // while (servoMoving)
+    // {
+    //   showClickAnimation(1);
+    //   Serial.println("showClickAnimation done!");
+    // }
 
-    if (millis() - lastRun <= 1000)
-    {
-      if (loopDelayMs > (millis() - startTime))
-      {
-        Serial.println(loopDelayMs - (millis() - startTime));
-      }
-      continue;
-    }
-    else
-    {
-      Serial.println("updateDisplay!");
-    }
+    // if (millis() - lastRun <= 1000)
+    // {
+    //   if (loopDelayMs > (millis() - startTime))
+    //   {
+    //     Serial.println(loopDelayMs - (millis() - startTime));
+    //   }
+    //   continue;
+    // }
+    // else
+    // {
+    //   Serial.println("updateDisplay!");
+    // }
 
-    lastRun = millis();
+    // lastRun = millis();
 
+    taskENTER_CRITICAL(&screenLock);
+    taskEXIT_CRITICAL(&screenLock);
     gfx->setTextColor(WHITE);
 
     gfx->fillRect(0, 0, 96, 64, BLACK);
@@ -457,6 +459,7 @@ void updateDisplay(void *p)
     gfx->print(getDecimalPart(temperatureF));
     gfx->setTextSize(FONT_SIZE);
 
+    taskEXIT_CRITICAL(&screenLock);
     // sprintf(timeString, "%4.1f", temperatureF + 5.6);
     // gfx->print(timeString);
     //  sprintf(timeString, "%4.1fC", temperatureC);
@@ -473,9 +476,9 @@ void updateDisplay(void *p)
 void showClickAnimation(int loopCount)
 {
 
+  taskENTER_CRITICAL(&screenLock);
   // Serial.print("FRAME_COUNT:");
   // Serial.println(FRAME_COUNT);
-
   for (int i = 0; i < loopCount; i++)
   {
 
@@ -504,6 +507,7 @@ void showClickAnimation(int loopCount)
       }
     }
   }
+  taskEXIT_CRITICAL(&screenLock);
 }
 
 void loop()
