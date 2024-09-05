@@ -396,6 +396,7 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
+  auto loopDelayMs = 100;
   auto lastRun = 0;
 
   for (;;)
@@ -407,22 +408,22 @@ void updateDisplay(void *p)
       showClickAnimation(1);
     }
 
-    Serial.println("updateDisplay!");
-    Serial.println(lastRun);
-    Serial.println(millis());
-    Serial.println(millis() - lastRun);
-    
+    // Serial.println("updateDisplay!");
+    // Serial.println(lastRun);
+    // Serial.println(millis());
+    // Serial.println(millis() - lastRun);
+
     if (millis() - lastRun <= 2000)
     {
-      Serial.println("Not updateDisplay!");
-      vTaskDelay(750 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+      // Serial.println("Not updateDisplay!");
+      vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
       continue;
     }
     else
     {
       Serial.println("updateDisplay!");
     }
-  
+
     lastRun = millis();
 
     gfx->setTextColor(WHITE);
@@ -463,7 +464,7 @@ void updateDisplay(void *p)
     // gfx->print(timeString);
     //  sprintf(timeString, "%4.1fC", temperatureC);
 
-    vTaskDelay(750 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+    vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
 
