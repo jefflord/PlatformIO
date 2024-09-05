@@ -443,6 +443,9 @@ void updateDisplay(void *p)
 
       taskENTER_CRITICAL(&screenLock);
 
+      Serial.println(startTime);
+      Serial.println((startTime % 3));
+      
       if ((startTime % 3) == 0)
       {
         renderCloud();
