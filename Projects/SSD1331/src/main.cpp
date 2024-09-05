@@ -132,6 +132,11 @@ void onTouch()
   // taskEXIT_CRITICAL(&myMutex);
 }
 
+void renderCloud()
+{
+  gfx->drawBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24, 24, 24, WHITE, BLACK);
+}
+
 void displayTest(int delayTimeMs)
 {
 
@@ -270,8 +275,8 @@ void setup()
     // delay(2000);
   }
 
-  displayTest(100);
-  return;
+  // displayTest(100);
+  // return;
 
   xTaskCreate(
       getTemp,   // Function to run on the new thread
@@ -437,6 +442,11 @@ void updateDisplay(void *p)
       lastT2 = temperatureF2;
 
       taskENTER_CRITICAL(&screenLock);
+
+      if ((startTime % 3) == 0)
+      {
+        renderCloud();
+      }
 
       gfx->setTextColor(WHITE);
 
