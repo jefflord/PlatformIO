@@ -347,7 +347,8 @@ String formatTime(unsigned long epochTime)
   // Format the result as hh:mm:ss AM/PM
   char timeString[12]; // Buffer for formatted time
   // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
-  sprintf(timeString, "%02d:%02d:%02d", hours, minutes, seconds, ampm.c_str());
+  // sprintf(timeString, "%02d:%02d:%02d", hours, minutes, seconds, ampm.c_str());
+  sprintf(timeString, "%02d:%02d %s", hours, minutes, ampm.c_str());
 
   return String(timeString);
 }
@@ -399,7 +400,7 @@ void updateDisplay(void *p)
   gfx->setTextSize(FONT_SIZE);
   gfx->fillScreen(BLACK);
 
-  long loopDelayMs = 1000;
+  long loopDelayMs = 2000;
   // long lastRun = 0;
 
   double lastT1 = 0;
