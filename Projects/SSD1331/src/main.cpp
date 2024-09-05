@@ -442,7 +442,7 @@ void updateDisplay(void *p)
     // gfx->print(timeString);
     //  sprintf(timeString, "%4.1fC", temperatureC);
 
-    vTaskDelay(1000 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
+    vTaskDelay(250 - (millis() - startTime) / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
 
