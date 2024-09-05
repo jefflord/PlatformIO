@@ -303,8 +303,8 @@ bool servoMoving = false;
 
 void pushServoButtonX(void *pvParameters)
 {
-  xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
   
+
   servoMoving = true;
 
   myServo.write(0);
@@ -319,6 +319,7 @@ void pushServoButton()
 {
   if (!servoMoving)
   {
+    xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
     xTaskCreate(pushServoButtonX, "pushServoButton", 2048, NULL, 1, NULL);
   }
 }
