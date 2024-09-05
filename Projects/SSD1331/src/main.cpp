@@ -500,8 +500,8 @@ void showClickAnimation(void *p)
       gfx->setTextColor(WHITE);
       gfx->drawBitmap((96 / 2) - (30 / 2), 8, frames[frame], FRAME_WIDTH, FRAME_HEIGHT, WHITE, BLACK);
       frame = (frame + 1) % FRAME_COUNT;
-      // delay(FRAME_DELAY / 2);
-      vTaskDelay((FRAME_DELAY * 2) / portTICK_PERIOD_MS); // Delay for 10ms
+      delay(FRAME_DELAY / 2);
+      // vTaskDelay((FRAME_DELAY * 2) / portTICK_PERIOD_MS);
       if (frame == 0)
       {
         break;
