@@ -39,6 +39,10 @@ VIN
 #include <Arduino_GFX_Library.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <WiFi.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <time.h>
 
 #define PWM_PIN 32
 #define PWM_CHANNEL 0
@@ -68,6 +72,8 @@ Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
 Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 Servo myServo; // Create a Servo object
 float temperatureC = 0;
+
+// WiFiUDP ntpUDP;
 
 void getTemp(void *parameter)
 {
@@ -132,6 +138,28 @@ void onTouch()
   // taskEXIT_CRITICAL(&myMutex);
 }
 
+void renderClickIcon(void *p)
+{
+
+  while (true)
+  {
+    while (servoMoving)
+    {
+      taskENTER_CRITICAL(&screenLock);
+      gfx->fillRect(0, 0, 13, 13, BLACK);
+      gfx->drawXBitmap(0, 0, epd_bitmap_icons8_natural_user_interface_2_13, 13, 13, WHITE);
+      taskEXIT_CRITICAL(&screenLock);
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      taskENTER_CRITICAL(&screenLock);
+      gfx->fillRect(0, 0, 13, 13, BLACK);
+      taskEXIT_CRITICAL(&screenLock);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+
+    vTaskDelay(33 / portTICK_PERIOD_MS);
+  }
+}
+
 void renderUploadIcon(void *p)
 {
 
@@ -142,7 +170,7 @@ void renderUploadIcon(void *p)
 
       taskENTER_CRITICAL(&screenLock);
       gfx->fillRect(96 - 13, 0, 13, 13, BLACK);
-      gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
+      gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13__2_, 13, 13, WHITE);
       taskEXIT_CRITICAL(&screenLock);
       vTaskDelay(500 / portTICK_PERIOD_MS);
       taskENTER_CRITICAL(&screenLock);
@@ -150,6 +178,7 @@ void renderUploadIcon(void *p)
       taskEXIT_CRITICAL(&screenLock);
       vTaskDelay(500 / portTICK_PERIOD_MS);
     }
+
     vTaskDelay(33 / portTICK_PERIOD_MS);
   }
   // vTaskDelete(NULL);
@@ -158,11 +187,11 @@ void renderUploadIcon(void *p)
 void displayTest(int delayTimeMs)
 {
 
-  gfx->begin();
-  gfx->fillScreen(BLACK);
-  gfx->setTextColor(WHITE);
-  // gfx->drawXBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24_swap, 24, 24, WHITE);
-  gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
+  // gfx->begin();
+  // gfx->fillScreen(BLACK);
+  // gfx->setTextColor(WHITE);
+  // // gfx->drawXBitmap(96 - 24, 0, epd_bitmap_icons8_upload_to_the_cloud_24_swap, 24, 24, WHITE);
+  // gfx->drawXBitmap(96 - 13, 0, epd_bitmap_icons8_thick_arrow_pointing_up_13, 13, 13, WHITE);
 
   return;
   gfx->begin();
@@ -211,12 +240,30 @@ void fakeUpload(void *p)
   }
 }
 
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000);
+
 void setup()
 {
   Serial.begin(115200);
 
   while (!Serial)
     continue;
+
+  auto result = WiFi.begin("DarkNet", "7pu77ies77");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(1000);
+    Serial.print(".");
+  }
+
+  Serial.print("\nConnected to Wi-Fi: ");
+  Serial.println(WiFi.localIP());
+
+  timeClient.begin();
+  timeClient.update();
+
+  xTaskCreate(updateTime, "updateTime", 2048, NULL, 1, NULL);
 
   Serial.print("File: ");
   Serial.print(PROJECT_SRC_DIR);
@@ -344,6 +391,7 @@ void setup()
   );
 
   xTaskCreate(renderUploadIcon, "renderUploadIcon", 2048, NULL, 1, NULL);
+  xTaskCreate(renderClickIcon, "renderClickIcon", 2048, NULL, 1, NULL);
 
   Serial.println("Setup Done");
 }
@@ -355,12 +403,6 @@ float fps = 1;                     // FPS value
 auto switchState = HIGH;
 unsigned long startMicros;
 unsigned long elapsedTime;
-
-int angle = 0;
-bool dirUp = true;
-int touchValue = 0;
-bool servoMoving = false;
-bool animationShowing = false;
 
 void pushServoButtonX(void *pvParameters)
 {
@@ -379,48 +421,55 @@ void pushServoButton()
 {
   if (!servoMoving)
   {
-    xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
+    // xTaskCreate(showClickAnimation, "showClickAnimation", 2048, NULL, 1, NULL);
     xTaskCreate(pushServoButtonX, "pushServoButton", 2048, NULL, 1, NULL);
   }
 }
 
-String formatTime(unsigned long epochTime)
+String formatTime(unsigned long epochTimeMs)
 {
-  // Extract hours, minutes, seconds
-  int hours = (epochTime % 86400L) / 3600; // 24-hour format
-  int minutes = (epochTime % 3600) / 60;
-  int seconds = epochTime % 60;
 
-  // Determine if it's AM or PM
-  String ampm = "AM";
-  if (hours >= 12)
+  time_t epochSeconds = epochTimeMs / 1000;
+
+  // Create a time_t object from epoch seconds
+  time_t epochTime = epochSeconds;
+
+  // Create a tm structure to hold the formatted time
+  struct tm formattedTime;
+
+  // Use localtime to populate the tm structure
+  localtime_r(&epochTime, &formattedTime);
+
+  // Use strftime to format the time as hh:mm:ss AM
+  char formattedTimeString[20];
+  strftime(formattedTimeString, sizeof(formattedTimeString), "%I:%M:%S %p", &formattedTime);
+
+  return String(formattedTimeString);
+}
+
+String currentTime = "";
+
+void updateTime(void *p)
+{
+  // return String("99:99 AX");
+
+  for (;;)
   {
-    ampm = "PM";
-    if (hours > 12)
-      hours -= 12; // Convert to 12-hour format
+    timeClient.update();
+    auto lastNTPTime = timeClient.getEpochTime();
+    struct tm *timeinfo;
+    char timeStringBuff[12];
+    timeinfo = localtime((time_t *)&lastNTPTime);
+    strftime(timeStringBuff, sizeof(timeStringBuff), "%I:%M %p", timeinfo);
+    currentTime = String(timeStringBuff);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
-  else if (hours == 0)
-  {
-    hours = 12; // Midnight case
-  }
-
-  // Format the result as hh:mm:ss AM/PM
-  char timeString[12]; // Buffer for formatted time
-  // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
-  // sprintf(timeString, "%02d:%02d:%02d", hours, minutes, seconds, ampm.c_str());
-  sprintf(timeString, "%02d:%02d %s", hours, minutes, ampm.c_str());
-
-  return String(timeString);
 }
 
 String getTime()
 {
-  auto currentTime = (1725491463531 + millis()) / 1000;
-  return formatTime(currentTime);
 
-  // timeClient->update();
-  // lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
-  // return ((int64_t)timeClient->getEpochTime() * 1000);
+  return currentTime;
 }
 
 String getDecimalPart(double number)
@@ -453,8 +502,6 @@ int getSignal()
 
   return 78;
 }
-
-bool forceUpdate = false;
 
 void updateDisplay(void *p)
 {
@@ -533,6 +580,7 @@ void updateDisplay(void *p)
 
 void showClickAnimation(void *p)
 {
+  return;
   Serial.println("showClickAnimation");
   int loopCount = 1;
   animationShowing = true;
