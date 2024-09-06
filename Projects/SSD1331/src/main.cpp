@@ -4,7 +4,7 @@ EN
 GND
 GND
 GPIO01
-GPIO02
+GPIO02  LED_ONBOARD
 GPIO03
 GPIO04
 GPIO05	OLED_CS
@@ -65,6 +65,7 @@ VIN
 #define GFX_BL DF_GFX_BL // Backlight control pin
 #define SWITCH_PIN 16
 #define TEST_PWM_RESOLUTION false
+#define LED_ONBOARD 2
 
 OneWire oneWire(TEMP_SENSOR_1WIRE);
 DallasTemperature sensors(&oneWire);
@@ -141,6 +142,7 @@ void onTouch()
 void renderClickIcon(void *p)
 {
 
+  pinMode(LED_ONBOARD, OUTPUT);
   while (true)
   {
     while (servoMoving)
@@ -155,7 +157,6 @@ void renderClickIcon(void *p)
       taskEXIT_CRITICAL(&screenLock);
       vTaskDelay(500 / portTICK_PERIOD_MS);
     }
-
     vTaskDelay(33 / portTICK_PERIOD_MS);
   }
 }
@@ -223,6 +224,8 @@ void displayTest(int delayTimeMs)
 
 void fakeUpload(void *p)
 {
+  vTaskDelay(2500 / portTICK_PERIOD_MS);
+
   int counter = 0;
   for (;;)
   {
@@ -241,8 +244,9 @@ void fakeUpload(void *p)
 }
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000);
+NTPClient timeClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 120000);
 
+#define SSDID "DarkNet"
 void setup()
 {
   Serial.begin(115200);
@@ -250,13 +254,20 @@ void setup()
   while (!Serial)
     continue;
 
-  auto result = WiFi.begin("DarkNet", "7pu77ies77");
+  gfx->begin();
+  gfx->fillScreen(BLACK);
+
+  auto result = WiFi.begin(SSDID, "7pu77ies77");
+  gfx->print("Connecting");
+
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(1000);
+    delay(500);
     Serial.print(".");
+    gfx->print(".");
   }
 
+  gfx->fillScreen(BLACK);
   Serial.print("\nConnected to Wi-Fi: ");
   Serial.println(WiFi.localIP());
 
@@ -302,8 +313,7 @@ void setup()
   }
 
   pinMode(SWITCH_PIN, INPUT_PULLUP);
-  gfx->begin();
-  gfx->fillScreen(BLACK);
+
   // gfx->setUTF8Print(true);
   // gfx->setFont(u8g2_font_helvR08_te); // not fixed
   // gfx->setFont(u8g2_font_bitcasual_tf); // not fixed
@@ -408,11 +418,11 @@ void pushServoButtonX(void *pvParameters)
 {
 
   servoMoving = true;
-
+  digitalWrite(LED_ONBOARD, HIGH);
   myServo.write(0);
   delay(750);
   myServo.write(90);
-  delay(250);
+  digitalWrite(LED_ONBOARD, LOW);
   servoMoving = false;
   vTaskDelete(NULL);
 }
