@@ -21,9 +21,9 @@ GPIO22	OLED_RES
 GPIO23	OLED_SDA
 GPIO25
 GPIO26
-GPIO27  TOUCH_PIN
+GPIO27
 GPIO32	SERVO
-GPIO33
+GPIO33  TOUCH_PIN
 GPIO34  TEMP_SENSOR
 GPIO35
 GPIO36
@@ -78,6 +78,7 @@ float temperatureC = 0;
 
 void getTemp(void *parameter)
 {
+
   while (true)
   {
     sensors.requestTemperatures();
@@ -624,7 +625,8 @@ void showClickAnimation(void *p)
 void loop()
 {
 
-  // showClickAnimation(2);
+  Serial.println("loop");
+  vTaskDelay(5000 / portTICK_PERIOD_MS); // Delay for 10ms
   return;
 
   switchState = digitalRead(SWITCH_PIN);
