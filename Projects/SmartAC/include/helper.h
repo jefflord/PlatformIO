@@ -46,7 +46,7 @@ class MyIoTHelper
 {
 public:
     // Public members (accessible from anywhere)
-    MyIoTHelper(const String &name);        
+    MyIoTHelper(const String &name);
     ~MyIoTHelper(); // Destructor
     void updateConfig();
     void chaos(const String &mode);
@@ -67,11 +67,14 @@ public:
 
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
 
-    String getStorageAsJson();
-    int64_t flushDatatoDB();
+    String getStorageAsJson(long long sourceId);
+    void flushAllDatatoDB();
+    int64_t flushDatatoDB(long long sourceId);
+
     size_t recordTemp(String name, int64_t time, float temperatureC);
 
     void clearSource(String name);
+    void clearSource(long long sourceId);
     void clearSource();
 
     int64_t getTime();
@@ -84,6 +87,8 @@ public:
 
     static void TaskFunction(void *parameter);
 
+    int64_t getSourceId(String name);
+
 private:
     bool hasRtc = false;
     WiFiUDP ntpUDP;
@@ -93,11 +98,9 @@ private:
 
     int64_t lastNTPTime = 0;             // Time from the last NTP update
     unsigned long lastNTPReadMillis = 0; // millis() at the time of the last NTP update
-    
+
     // Private members (accessible only within the class)
     bool configHasBeenDownloaded = false;
-
-    int64_t getSourceId(String name);
 
     String wifi_ssid = "";
     String wifi_password = "";
@@ -108,7 +111,7 @@ private:
     bool hasTimePassed();
 
     DataStorage storage;
-    NTPClient* timeClient;
+    NTPClient *timeClient;
 
     const String url = "https://5p9y34b4f9.execute-api.us-east-2.amazonaws.com/test";
 };

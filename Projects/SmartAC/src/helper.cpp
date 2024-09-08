@@ -109,7 +109,7 @@ int64_t MyIoTHelper::getSourceId(String name)
     }
 }
 
-String MyIoTHelper::getStorageAsJson()
+String MyIoTHelper::getStorageAsJson(long long sourceId)
 {
 
     // Create a JSON document
@@ -121,22 +121,27 @@ String MyIoTHelper::getStorageAsJson()
     // Iterate through the storage and add each SourceData to the JSON array
     for (const auto &source : storage)
     {
-        JsonObject jsonObject = doc.to<JsonObject>();
-        jsonObject["SourceId"] = source.sourceId;
-
-        for (const auto &point : source.data)
+        if (sourceId == source.sourceId)
         {
-            JsonArray pointArray = jsonObject["data"].add<JsonArray>();
-            pointArray.add(point.first);  // Timestamp
-            pointArray.add(point.second); // Temperature
+            JsonObject jsonObject = doc.to<JsonObject>();
+            jsonObject["SourceId"] = source.sourceId;
+
+            for (const auto &point : source.data)
+            {
+                JsonArray pointArray = jsonObject["data"].add<JsonArray>();
+                pointArray.add(point.first);  // Timestamp
+                pointArray.add(point.second); // Temperature
+            }
+
+            // Serialize the JSON document to a String
+            String jsonString;
+            serializeJson(doc, jsonString);
+
+            return jsonString;
         }
     }
 
-    // Serialize the JSON document to a String
-    String jsonString;
-    serializeJson(doc, jsonString);
-
-    return jsonString;
+    return "";
 }
 
 void MyIoTHelper::clearSource()
@@ -144,6 +149,19 @@ void MyIoTHelper::clearSource()
     for (auto &source : storage)
     {
         source.data.clear();
+    }
+}
+
+
+void MyIoTHelper::clearSource(long long sourceId)
+{
+
+    for (auto &source : storage)
+    {
+        if (source.sourceId == sourceId)
+        {
+            source.data.clear();
+        }
     }
 }
 
@@ -161,10 +179,20 @@ void MyIoTHelper::clearSource(String name)
     }
 }
 
-int64_t MyIoTHelper::flushDatatoDB()
+void MyIoTHelper::flushAllDatatoDB()
 {
 
-    // Serial.println(helper.getStorageAsJson().c_str());
+    for (auto &source : storage)
+    {
+        flushDatatoDB(source.sourceId);
+
+        // Serial.println("RETURN!!!!");
+        // break;
+    }
+}
+
+int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
+{
 
     JsonDocument doc;
 
@@ -173,14 +201,14 @@ int64_t MyIoTHelper::flushDatatoDB()
     doc["queryStringParameters"]["action"] = "addTemps";
     doc["queryStringParameters"]["configName"] = configName;
     doc["httpMethod"] = "POST";
-    doc["body"] = getStorageAsJson();
+    doc["body"] = getStorageAsJson(sourceId);
 
     // Serialize JSON to a String
     String jsonPayload;
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    // Serial.println(jsonPayload);
+    Serial.println(jsonPayload);
 
     if (testJsonBeforeSend)
     {
@@ -191,6 +219,10 @@ int64_t MyIoTHelper::flushDatatoDB()
             return (int64_t)-1;
         }
     }
+
+    // Serial.printf("flushDatatoDB! %d\n", sourceId);
+    // Serial.print("jsonPayload:");
+    // Serial.println(jsonPayload);
 
     if (!sendToDb)
     {
@@ -242,7 +274,7 @@ int64_t MyIoTHelper::flushDatatoDB()
 
         char *end;
         auto id = strtoll(val.c_str(), &end, 10); // Base 10
-        clearSource();
+        clearSource(sourceId);
 
         parseConfig(config);
 
@@ -269,7 +301,7 @@ size_t MyIoTHelper::recordTemp(String name, int64_t time, float temperatureC)
         }
     }
 
-    // Serial.println("E");
+    // Serial.println("Adding new newSource for this");
     SourceData newSource;
     // Serial.println("F");
     newSource.sourceId = sourceId;
@@ -449,16 +481,19 @@ void MyIoTHelper::parseConfig(const String &config)
         servoAngle = bodyDoc["servoAngle"];
         servoHomeAngle = bodyDoc["servoHomeAngle"];
 
-        Serial.println("######## parseConfig ########");
-        Serial.printf("\t pressDownHoldTime: %d\n", pressDownHoldTime);
-        Serial.printf("\t tempReadIntevalSec: %d\n", tempReadIntevalSec);
-        Serial.printf("\t sendToDb: %s\n", sendToDb ? "true" : "false");
-        Serial.printf("\t testJsonBeforeSend: %s\n", pressDownHoldTime ? "true" : "false");
-        Serial.printf("\t tempFlushIntevalSec: %d\n", tempFlushIntevalSec);
-        Serial.printf("\t configUpdateSec: %d\n", configUpdateSec);
-        Serial.printf("\t servoAngle: %d\n", servoAngle);
-        Serial.printf("\t servoHomeAngle: %d\n", servoHomeAngle);
-        Serial.println("######## parseConfig ########");
+        if (false)
+        {
+            Serial.println("######## parseConfig ########");
+            Serial.printf("\t pressDownHoldTime: %d\n", pressDownHoldTime);
+            Serial.printf("\t tempReadIntevalSec: %d\n", tempReadIntevalSec);
+            Serial.printf("\t sendToDb: %s\n", sendToDb ? "true" : "false");
+            Serial.printf("\t testJsonBeforeSend: %s\n", pressDownHoldTime ? "true" : "false");
+            Serial.printf("\t tempFlushIntevalSec: %d\n", tempFlushIntevalSec);
+            Serial.printf("\t configUpdateSec: %d\n", configUpdateSec);
+            Serial.printf("\t servoAngle: %d\n", servoAngle);
+            Serial.printf("\t servoHomeAngle: %d\n", servoHomeAngle);
+            Serial.println("######## parseConfig ########");
+        }
     }
 }
 

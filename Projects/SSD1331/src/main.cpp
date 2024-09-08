@@ -1,36 +1,4 @@
-/*
-3V3
-EN
-GND
-GND
-GPIO01
-GPIO02  LED_ONBOARD
-GPIO03
-GPIO04
-GPIO05	OLED_CS
-GPIO12
-GPIO13
-GPIO14
-GPIO15
-GPIO16  SWITCH_PIN
-GPIO17
-GPIO18	OLED_SCL
-GPIO19
-GPIO21	OLED_DC
-GPIO22	OLED_RES
-GPIO23	OLED_SDA
-GPIO25
-GPIO26
-GPIO27
-GPIO32	SERVO
-GPIO33  TOUCH_PIN
-GPIO34  TEMP_SENSOR
-GPIO35
-GPIO36
-GPIO39
-VIN
 
-*/
 #include <Arduino.h>
 #include <bmp.h>
 #include <SPI.h>
@@ -74,6 +42,7 @@ Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 Servo myServo; // Create a Servo object
 float temperature_0_C = 0;
 float temperature_1_C = 0;
+float temperature_2_C = 0;
 
 // WiFiUDP ntpUDP;
 
@@ -111,6 +80,7 @@ void getTemp(void *parameter)
 
     temperature_0_C = sensors.getTempCByIndex(0);
     temperature_1_C = sensors.getTempCByIndex(1);
+    temperature_2_C = sensors.getTempCByIndex(2);
 
     //  Serial.print("temp: ");
     //  Serial.println(temperature_1_C);
@@ -514,10 +484,13 @@ String getTime()
 
 String getDecimalPart(double number)
 {
+
+  number = round(number * 10) / 10.0;
+
   char buffer[20]; // Buffer to store the formatted result
 
   // Format the number to get only the decimal part (keeping two decimal places)
-  sprintf(buffer, "%.2f", number); // Adjust precision if needed (e.g., "%.2f")
+  sprintf(buffer, "%.1f", number); // Adjust precision if needed (e.g., "%.2f")
 
   // Find the position of the decimal point
   char *decimalPoint = buffer;
@@ -554,6 +527,7 @@ void updateDisplay(void *p)
 
   double lastT1 = 0;
   double lastT2 = 0;
+  double lastT3 = 0;
 
   for (;;)
   {
@@ -568,14 +542,24 @@ void updateDisplay(void *p)
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
     // sprintf(timeString, "%4.1f\u00B0C", temperature_1_C);
 
+    // temperature_0_C = round(temperature_0_C * 10) / 10.0;
+    // temperature_1_C = round(temperature_1_C * 10) / 10.0;
+    // temperature_2_C = round(temperature_2_C * 10) / 10.0;
+
+    temperature_0_C = round(temperature_0_C);
+    temperature_1_C = round(temperature_1_C);
+    temperature_2_C = round(temperature_2_C);
+
     auto temperatureF1 = (temperature_0_C * (9.0 / 5.0)) + 32;
     auto temperatureF2 = (temperature_1_C * (9.0 / 5.0)) + 32;
+    auto temperatureF3 = (temperature_2_C * (9.0 / 5.0)) + 32;
 
-    if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2)
+    if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
     {
       forceUpdate = false;
       lastT1 = temperatureF1;
       lastT2 = temperatureF2;
+      lastT3 = temperatureF3;
 
       taskENTER_CRITICAL(&screenLock);
 
@@ -599,18 +583,27 @@ void updateDisplay(void *p)
       gfx->setTextColor(BLUE);
       sprintf(bufferForNumber, "%2.0f", temperatureF1);
       gfx->print(bufferForNumber);
-      gfx->setTextSize(FONT_SIZE - 1);
-      gfx->print(getDecimalPart(temperatureF1));
+      // gfx->setTextSize(FONT_SIZE - 1);
+      // gfx->print(getDecimalPart(temperatureF1));
       gfx->setTextSize(FONT_SIZE);
 
-      gfx->setCursor(gfx->getCursorX() + 22, gfx->getCursorY());
-
-      gfx->setTextColor(GREEN);
+      auto y = gfx->getCursorY();
+      gfx->setCursor(gfx->getCursorX() + 12, y);
+      gfx->setTextColor(RED);
       sprintf(bufferForNumber, "%2.0f", temperatureF2);
       gfx->print(bufferForNumber);
-      gfx->setTextSize(FONT_SIZE - 1);
-      gfx->print(getDecimalPart(temperatureF2));
+      // gfx->setTextSize(FONT_SIZE - 1);
+      // gfx->print(getDecimalPart(temperatureF2));
       gfx->setTextSize(FONT_SIZE);
+
+      gfx->setCursor(gfx->getCursorX() + 12, y);
+      gfx->setTextColor(GREEN);
+      sprintf(bufferForNumber, "%2.0f", temperatureF3);
+      gfx->print(bufferForNumber);
+      // gfx->setTextSize(FONT_SIZE - 1);
+      // gfx->print(getDecimalPart(temperatureF3));
+      gfx->setTextSize(FONT_SIZE);
+
       taskEXIT_CRITICAL(&screenLock);
     }
 

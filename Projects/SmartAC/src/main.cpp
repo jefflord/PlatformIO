@@ -8,8 +8,8 @@ Notes:
 #include <ESP32Servo.h>
 #include "helper.h"
 
-const int button1Pin = 33;
-const int button2Pin = 39;
+const int button1Pin = 2; // update config
+const int button2Pin = 4; // kill wifi
 
 const int servoPin = 32;
 const int potPin = 34;
@@ -24,7 +24,7 @@ int potValue = 0;
 
 Servo myServo; // Create a Servo object
 
-#define ONE_WIRE_BUS 4
+#define ONE_WIRE_BUS 19
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
@@ -66,6 +66,20 @@ unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
 
 bool doTempStarted = false;
 
+String formatDeviceAddress(DeviceAddress deviceAddress)
+{
+  String address = "";
+  for (int i = 0; i < 8; i++)
+  {
+    address += String(deviceAddress[i], HEX);
+    if (i < 7)
+    {
+      address += " ";
+    }
+  }
+  return address;
+}
+
 void _doTemp(void *parameter)
 {
   while (true)
@@ -74,11 +88,25 @@ void _doTemp(void *parameter)
     auto currentMillis = millis();
     // Serial.print("doTemp() ");
     sensors.requestTemperatures();
-    float temperatureC = sensors.getTempCByIndex(0);
-    auto time = helper.getTime();
-    auto itemCount = helper.recordTemp("mytemp1", time, temperatureC);
 
-    // Serial.printf("items:  %d, temperature: %f\n", itemCount, temperatureC);
+    for (int i = 0; i < sensors.getDeviceCount(); i++)
+    {
+      DeviceAddress deviceAddress;
+      sensors.getAddress(deviceAddress, i);
+      auto sensorId = formatDeviceAddress(deviceAddress);
+      // Serial.print("Sensor ");
+      // Serial.printf("%d, %s", i, sensorId.c_str());
+      // Serial.print(": ");
+      // Serial.println(sensors.getTempC(deviceAddress));
+
+      float temperatureC = sensors.getTempC(deviceAddress);
+      auto time = helper.getTime();
+      auto itemCount = helper.recordTemp(sensorId, time, temperatureC);
+
+      // Serial.printf("'%s': %d items, temperature: %f\n", sensorId.c_str(), itemCount, temperatureC);
+
+      //Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
+    }
 
     // if (false)
     // {
@@ -96,7 +124,7 @@ void _doTemp(void *parameter)
     {
       previousTempFlushMillis = currentMillis;
       Serial.println("FLUSH TIME");
-      helper.flushDatatoDB();
+      helper.flushAllDatatoDB();
     }
 
     vTaskDelay(pdMS_TO_TICKS(helper.tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
@@ -108,11 +136,15 @@ void doTemp()
 
   if (!doTempStarted)
   {
+
+    Serial.print("xPortGetFreeHeapSize: ");
+    Serial.println(xPortGetFreeHeapSize());
+
     doTempStarted = true;
     xTaskCreate(
         _doTemp,  // Function to run on the new thread
         "doTemp", // Name of the task (for debugging)
-        8192,     // Stack size (in bytes)
+        8192 * 2, // Stack size (in bytes) // 8192
         NULL,     // Parameter passed to the task
         1,        // Priority (0-24, higher number means higher priority)
         NULL      // Handle to the task (not used here)
