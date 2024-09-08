@@ -72,9 +72,24 @@ DallasTemperature sensors(&oneWire);
 Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
 Arduino_GFX *gfx = new Arduino_SSD1331(bus, OLED_RES);
 Servo myServo; // Create a Servo object
-float temperatureC = 0;
+float temperature_0_C = 0;
+float temperature_1_C = 0;
 
 // WiFiUDP ntpUDP;
+
+String formatDeviceAddress(DeviceAddress deviceAddress)
+{
+  String address = "";
+  for (int i = 0; i < 8; i++)
+  {
+    address += String(deviceAddress[i], HEX);
+    if (i < 7)
+    {
+      address += " ";
+    }
+  }
+  return address;
+}
 
 void getTemp(void *parameter)
 {
@@ -82,9 +97,23 @@ void getTemp(void *parameter)
   while (true)
   {
     sensors.requestTemperatures();
-    temperatureC = sensors.getTempCByIndex(0);
-    // Serial.print("temp: ");
-    // Serial.println(temperatureC);
+
+    sensors.requestTemperatures();
+    for (int i = 0; i < sensors.getDeviceCount(); i++)
+    {
+      DeviceAddress deviceAddress;
+      sensors.getAddress(deviceAddress, i);
+      Serial.print("Sensor ");
+      Serial.printf("%d, %s", i, formatDeviceAddress(deviceAddress).c_str());
+      Serial.print(": ");
+      Serial.println(sensors.getTempC(deviceAddress));
+    }
+
+    temperature_0_C = sensors.getTempCByIndex(0);
+    temperature_1_C = sensors.getTempCByIndex(1);
+
+    //  Serial.print("temp: ");
+    //  Serial.println(temperature_1_C);
     vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 10ms
   }
 }
@@ -537,10 +566,10 @@ void updateDisplay(void *p)
     }
 
     // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
-    // sprintf(timeString, "%4.1f\u00B0C", temperatureC);
+    // sprintf(timeString, "%4.1f\u00B0C", temperature_1_C);
 
-    auto temperatureF1 = (temperatureC * (9.0 / 5.0)) + 32;
-    auto temperatureF2 = temperatureF1 + 5.6;
+    auto temperatureF1 = (temperature_0_C * (9.0 / 5.0)) + 32;
+    auto temperatureF2 = (temperature_1_C * (9.0 / 5.0)) + 32;
 
     if (forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2)
     {
@@ -667,7 +696,7 @@ void loop()
     gfx->printf("%.1f", fps);
     gfx->print("-");
     gfx->println(angle);
-    gfx->print(temperatureC);
+    gfx->print(temperature_1_C);
 
     elapsedTime = micros() - startMicros;
     // 8333
