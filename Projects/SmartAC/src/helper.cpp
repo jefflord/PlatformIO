@@ -38,10 +38,9 @@ int64_t MyIoTHelper::getSourceId(String name)
     }
     else
     {
-        Serial.println("getSourceId NOT cached!");
+        // Serial.println("getSourceId NOT cached!");
     }
 
-    Serial.println("internalUpdateConfig");
     lastConfigUpdateTime = std::chrono::steady_clock::now();
     configHasBeenDownloaded = true;
 
@@ -59,7 +58,8 @@ int64_t MyIoTHelper::getSourceId(String name)
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    Serial.println(jsonPayload);
+    // Serial.println("internalUpdateConfig");
+    // Serial.println(jsonPayload);
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -84,7 +84,7 @@ int64_t MyIoTHelper::getSourceId(String name)
         return (int64_t)-2;
     }
 
-    Serial.println(response);
+    // Serial.println(response);
 
     DeserializationError error = deserializeJson(doc, response);
     if (error)
@@ -152,7 +152,6 @@ void MyIoTHelper::clearSource()
     }
 }
 
-
 void MyIoTHelper::clearSource(long long sourceId)
 {
 
@@ -208,7 +207,7 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    Serial.println(jsonPayload);
+    // Serial.println(jsonPayload);
 
     if (testJsonBeforeSend)
     {
@@ -278,10 +277,29 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
 
         parseConfig(config);
 
-        Serial.print("addTemps: ");
-        Serial.println(id);
+        // Serial.print("addTemps: ");
+        // Serial.println(id);
         return id;
     }
+}
+
+size_t MyIoTHelper::getRecordCount(String name)
+{
+
+    auto sourceId = getSourceId(name);
+
+    // Serial.print("sourceId:");
+    // Serial.println(sourceId);
+
+    for (auto &source : storage)
+    {
+        if (source.sourceId == sourceId)
+        {
+            return source.data.size();
+        }
+    }
+
+    return 0;
 }
 
 size_t MyIoTHelper::recordTemp(String name, int64_t time, float temperatureC)
@@ -535,7 +553,18 @@ void MyIoTHelper::Setup()
 
 int64_t MyIoTHelper::getTime()
 {
-    timeClient->update();
+
+    if (millis() - timeLastCheck > 60000)
+    {
+        delete timeClient;
+        WiFiUDP ntpUDP;
+        timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000); // Time offset in seconds and update interval
+        timeClient->begin();
+        auto updated = timeClient->update();
+        // Serial.printf("update %s\n", updated ? "true" : "false");
+        timeLastCheck = millis();
+    }
+
     lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
     return ((int64_t)timeClient->getEpochTime() * 1000);
 
@@ -563,7 +592,7 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
 
     WiFiUDP ntpUDP;
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
-    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15);
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000);
     timeClient->begin();
     timeClient->update();
     Serial.print("Current time: ");

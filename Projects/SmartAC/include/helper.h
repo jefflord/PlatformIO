@@ -73,6 +73,8 @@ public:
 
     size_t recordTemp(String name, int64_t time, float temperatureC);
 
+    size_t getRecordCount(String name);
+
     void clearSource(String name);
     void clearSource(long long sourceId);
     void clearSource();
@@ -88,10 +90,14 @@ public:
     static void TaskFunction(void *parameter);
 
     int64_t getSourceId(String name);
+    
 
 private:
     bool hasRtc = false;
     WiFiUDP ntpUDP;
+    NTPClient *timeClient;
+    int64_t timeLastCheck = millis();
+    
     RTC_DS3231 rtc;
 
     std::unordered_map<std::string, int64_t> sourceIdCache;
@@ -111,7 +117,6 @@ private:
     bool hasTimePassed();
 
     DataStorage storage;
-    NTPClient *timeClient;
 
     const String url = "https://5p9y34b4f9.execute-api.us-east-2.amazonaws.com/test";
 };
