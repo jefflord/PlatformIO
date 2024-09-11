@@ -7,6 +7,8 @@
 MyIoTHelper::MyIoTHelper(const String &name)
 {
 
+    mutex = xSemaphoreCreateMutex();
+    setTimeLastCheck(millis());
     configName = name;
 }
 
@@ -554,7 +556,19 @@ void MyIoTHelper::Setup()
 int64_t MyIoTHelper::getTime()
 {
 
-    if (millis() - timeLastCheck > 60000)
+    Serial.println("A");
+    auto xxx = millis();
+    Serial.println(xxx);
+    Serial.println("B");
+
+    Serial.print("Running on core: ");
+    Serial.println(xPortGetCoreID());
+
+    Serial.println(getTimeLastCheck());
+
+    Serial.println("C!!!!!!!!!!!!!!!!!!!");
+
+    if (millis() - getTimeLastCheck() > 60000)
     {
         delete timeClient;
         WiFiUDP ntpUDP;
@@ -562,7 +576,7 @@ int64_t MyIoTHelper::getTime()
         timeClient->begin();
         auto updated = timeClient->update();
         // Serial.printf("update %s\n", updated ? "true" : "false");
-        timeLastCheck = millis();
+        setTimeLastCheck(millis());
     }
 
     lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
@@ -571,6 +585,21 @@ int64_t MyIoTHelper::getTime()
     // unsigned long currentMillis = millis();
     // int64_t elapsedMillis = currentMillis - lastNTPReadMillis;
     // return lastNTPTime + elapsedMillis;
+}
+
+int64_t MyIoTHelper::getTimeLastCheck()
+{
+    xSemaphoreTake(mutex, portMAX_DELAY);
+    auto x = _timeLastCheck;
+    xSemaphoreGive(mutex);
+    return x;
+}
+
+void MyIoTHelper::setTimeLastCheck(int64_t value)
+{
+    xSemaphoreTake(mutex, portMAX_DELAY);
+    _timeLastCheck = value;
+    xSemaphoreGive(mutex);
 }
 
 wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
@@ -686,3 +715,176 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
 //         Serial.println("Wi-Fi not connected");
 //     }
 // }
+
+String MyIoTHelper::formatDeviceAddress(DeviceAddress deviceAddress)
+{
+    String address = "";
+    for (int i = 0; i < 8; i++)
+    {
+        char hexByte[3];                            // Buffer to hold two hex digits + null terminator
+        sprintf(hexByte, "%02X", deviceAddress[i]); // Format with zero padding
+        address += hexByte;
+        if (i < 7)
+        {
+            address += " ";
+        }
+    }
+    return address;
+}
+
+void showStartReason()
+{
+    esp_reset_reason_t reason = esp_reset_reason();
+
+    Serial.print("Reset reason: ");
+    long delayMs = 0;
+
+    switch (reason)
+    {
+    case ESP_RST_POWERON:
+        Serial.println("Power on reset");
+        break;
+    case ESP_RST_EXT:
+        Serial.println("External reset");
+        break;
+    case ESP_RST_SW:
+        Serial.println("Software reset");
+        break;
+    case ESP_RST_PANIC:
+        Serial.println("Exception/panic reset");
+        delayMs = 1000;
+        break;
+    case ESP_RST_INT_WDT:
+        Serial.println("Interrupt watchdog reset");
+        delayMs = 1000;
+        break;
+    case ESP_RST_TASK_WDT:
+        Serial.println("Task watchdog reset");
+        delayMs = 1000;
+        break;
+    case ESP_RST_WDT:
+        Serial.println("Other watchdog reset");
+        delayMs = 1000;
+        break;
+    case ESP_RST_DEEPSLEEP:
+        Serial.println("Deep sleep reset");
+        break;
+    case ESP_RST_BROWNOUT:
+        Serial.println("Brownout reset");
+        break;
+    case ESP_RST_SDIO:
+        Serial.println("SDIO reset");
+        break;
+    default:
+        Serial.println("Unknown reset reason");
+        break;
+    }
+
+    // delay(delayMs);
+}
+
+TempHelper::TempHelper(MyIoTHelper *_helper)
+{
+    ioTHelper = _helper;
+}
+
+void TempHelper::doTemp(void *parameter)
+{
+
+    TempHelper *thisTempHelper = (TempHelper *)parameter;
+
+    OneWire oneWire(ONE_WIRE_BUS);
+    thisTempHelper->sensors = new DallasTemperature(&oneWire);
+    thisTempHelper->sensors->begin();
+
+    auto helper = thisTempHelper->ioTHelper;
+    auto sensors = thisTempHelper->sensors;
+
+    long flushCount = 0;
+    while (true)
+    {
+        // Serial.println("_doTemp!!!");
+        auto currentMillis = millis();
+        // Serial.print("doTemp() ");
+        Serial.println("111");
+        sensors->requestTemperatures();
+
+        Serial.println("222");
+
+        for (int i = 0; i < sensors->getDeviceCount(); i++)
+        {
+            Serial.println("222bbbb");
+            DeviceAddress deviceAddress;
+            sensors->getAddress(deviceAddress, i);
+            Serial.println("ccccccccc");
+            auto sensorId = helper->formatDeviceAddress(deviceAddress);
+
+            Serial.println("444444444");
+            // Serial.print("Sensor ");
+            // Serial.printf("%d, %s", i, sensorId.c_str());
+            // Serial.print(": ");
+            // Serial.println(sensors.getTempC(deviceAddress));
+
+            Serial.println("444444444xxxxxxxxxxxx");
+            float temperatureC = sensors->getTempC(deviceAddress);
+            Serial.println("444444444xxxxxxxxxxxx222");
+            auto time = helper->getTime();
+            Serial.println("444444444xxxxxxxxxxxx333");
+            auto itemCount = helper->recordTemp(sensorId, time, temperatureC);
+            Serial.println("444444444xxxxxxxxxxxx444");
+
+            Serial.println("5555555555");
+
+            Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, temperatureC);
+
+            // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
+        }
+
+        Serial.println("33");
+
+        // if (false)
+        // {
+        //   Serial.print(temperatureC);
+        //   Serial.print(" -- ");
+        //   Serial.print(temperatureF);
+        //   Serial.print(" -- ");
+        //   Serial.print(time);
+        //   Serial.print(" -- ");
+        //   Serial.print(itemCount);
+        //   Serial.println();
+        // }
+
+        if (currentMillis - thisTempHelper->previousTempFlushMillis >= (helper->tempFlushIntevalSec * 1000))
+        {
+
+            thisTempHelper->previousTempFlushMillis = currentMillis;
+            Serial.printf("FLUSH TIME %ld\n", ++flushCount);
+
+            for (int i = 0; i < sensors->getDeviceCount(); i++)
+            {
+                DeviceAddress deviceAddress;
+                sensors->getAddress(deviceAddress, i);
+                auto sensorId = helper->formatDeviceAddress(deviceAddress);
+                auto itemCount = helper->getRecordCount(sensorId);
+                Serial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
+            }
+
+            helper->flushAllDatatoDB();
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(helper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
+    }
+}
+
+void TempHelper::begin()
+{
+
+    xTaskCreate(
+        doTemp,    // Function to run on the new thread
+        "doTemp",  // Name of the task (for debugging)
+        8192 * 8,  // Stack size (in bytes) // 8192
+        ioTHelper, // Parameter passed to the task
+        1,         // Priority (0-24, higher number means higher priority)
+        NULL       // Handle to the task (not used here)
+    );
+}

@@ -11,11 +11,16 @@ void setup()
   while (!Serial)
     continue;
 
+  digitalWrite(8, HIGH);
+  pinMode(8, OUTPUT);
 }
 
 void loop()
 {
 
-  Serial.println(millis());
+  Serial.printf("millis %lld\n", millis());
+  digitalWrite(8, HIGH);
+  delay(1000);
+  digitalWrite(8, LOW);
   delay(1000);
 }

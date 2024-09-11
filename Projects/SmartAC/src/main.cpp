@@ -7,366 +7,394 @@ To Do:
   - Log start time, boot reason
   - Reboot from web
 */
-
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include "helper.h"
 
-const int button1Pin = 2; // update config
-const int button2Pin = 4; // kill wifi
+#define USE_MUTEX true
+#define USE_LOCK false
 
-const int servoPin = 32;
-const int potPin = 34;
+/***************************************************/
 
-int button1State = 0;
-int button2State = 0;
-
-int potValue = 0;
-
-// int pressDownHoldTime = 250;
-// int startAngle = 90;
-
-Servo myServo; // Create a Servo object
-
-#define ONE_WIRE_BUS 19
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
-/**/
-const int numReadings = 10; // Number of readings to average
-int readings[numReadings];  // Array to store the readings
-int readIndex = 0;          // Index of the current reading
-int total = 0;
-
-MyIoTHelper helper("SmartAC");
-
-/**/
-
-bool btn1IsDown = false;
-bool btn2IsDown = true;
-
-void showStartReason()
+class SharedClass
 {
-  esp_reset_reason_t reason = esp_reset_reason();
+private:
+  int sharedVariable;
+  SemaphoreHandle_t mutex;
+  portMUX_TYPE sharedObjectMutex;
 
-  Serial.print("Reset reason: ");
-  long delayMs = 0;
+public:
+  double objectCore = 0;
 
-  switch (reason)
+  SharedClass()
   {
-  case ESP_RST_POWERON:
-    Serial.println("Power on reset");
-    break;
-  case ESP_RST_EXT:
-    Serial.println("External reset");
-    break;
-  case ESP_RST_SW:
-    Serial.println("Software reset");
-    break;
-  case ESP_RST_PANIC:
-    Serial.println("Exception/panic reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_INT_WDT:
-    Serial.println("Interrupt watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_TASK_WDT:
-    Serial.println("Task watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_WDT:
-    Serial.println("Other watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_DEEPSLEEP:
-    Serial.println("Deep sleep reset");
-    break;
-  case ESP_RST_BROWNOUT:
-    Serial.println("Brownout reset");
-    break;
-  case ESP_RST_SDIO:
-    Serial.println("SDIO reset");
-    break;
-  default:
-    Serial.println("Unknown reset reason");
-    break;
+
+    objectCore = round(xPortGetCoreID());
+    Serial.printf("SharedClass in  %d\n", objectCore);
+
+    if (USE_LOCK)
+    {
+
+      sharedObjectMutex = portMUX_INITIALIZER_UNLOCKED;
+
+      Serial.println("TEST portENTER_CRITICAL");
+      portENTER_CRITICAL(&sharedObjectMutex);
+
+      Serial.println("TEST portEXIT_CRITICAL");
+      portEXIT_CRITICAL(&sharedObjectMutex);
+
+      Serial.println("TEST Done");
+    }
+    else if (USE_MUTEX)
+    {
+
+      mutex = xSemaphoreCreateMutex();
+
+      if (mutex == NULL)
+      {
+        Serial.println("Failed to create mutex");
+        while (1)
+          ; // Halt execution if mutex creation fails
+      }
+      Serial.println("Create mutex success");
+    }
   }
 
-  // delay(delayMs);
+  ~SharedClass()
+  {
+    if (mutex != NULL)
+    {
+      vSemaphoreDelete(mutex);
+    }
+  }
+
+  void incrementSharedVariable(int value)
+  {
+
+    if (USE_LOCK)
+    {
+      portENTER_CRITICAL(&sharedObjectMutex);
+      sharedVariable += value;
+      portEXIT_CRITICAL(&sharedObjectMutex);
+    }
+    else if (USE_MUTEX)
+    {
+      // portMAX_DELAY
+      if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+      { // Timeout of 100ms
+        sharedVariable += value;
+        xSemaphoreGive(mutex);
+      }
+      else
+      {
+        Serial.println("Failed to take mutex in setSharedVariable");
+      }
+    }
+    else
+    {
+      sharedVariable += value;
+    }
+  }
+
+  void setSharedVariable(int value)
+  {
+
+    if (USE_LOCK)
+    {
+      portENTER_CRITICAL(&sharedObjectMutex);
+      sharedVariable = value;
+      portEXIT_CRITICAL(&sharedObjectMutex);
+    }
+    else if (USE_MUTEX)
+    {
+      if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+      { // Timeout of 100ms
+        sharedVariable = value;
+        xSemaphoreGive(mutex);
+      }
+      else
+      {
+        Serial.println("Failed to take mutex in setSharedVariable");
+      }
+    }
+    else
+    {
+      sharedVariable = value;
+    }
+  }
+
+  int getSharedVariable()
+  {
+    int value = -1; // Default value
+
+    if (USE_LOCK)
+    {
+      portENTER_CRITICAL(&sharedObjectMutex);
+      value = sharedVariable;
+      portEXIT_CRITICAL(&sharedObjectMutex);
+    }
+    else if (USE_MUTEX)
+    {
+      if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+      { // Timeout of 100ms
+        value = sharedVariable;
+        xSemaphoreGive(mutex);
+      }
+      else
+      {
+        Serial.println("Failed to take mutex in getSharedVariable");
+      }
+      return value;
+    }
+    else
+    {
+      return sharedVariable;
+    }
+  }
+};
+
+struct TaskParamsHolder
+{
+  void *sharedObj;
+};
+
+void task1(void *parameter)
+{
+
+  // void **params = static_cast<void **>(parameter);
+  // void *paramsX = *params;
+  // SharedClass *sharedObjectx = static_cast<SharedClass *>(paramsX);
+
+  // SharedClass *sharedObjectx = ((TaskParamsHolder *)parameter)->sharedObj;
+  SharedClass *sharedObjectx = static_cast<SharedClass *>(((TaskParamsHolder *)parameter)->sharedObj);
+
+  // SharedClass* sharedObj = static_cast<SharedClass*>(paramsX);
+
+  Serial.println("task1");
+  for (;;)
+  {
+    Serial.println("Resetting");
+    sharedObjectx->setSharedVariable(100);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+  }
 }
+
+void task2(void *parameter)
+{
+
+  // SharedClass *sharedObjectx = ((TaskParamsHolder *)parameter)->sharedObj;
+  SharedClass *sharedObjectx = static_cast<SharedClass *>(((TaskParamsHolder *)parameter)->sharedObj);
+
+  Serial.println("task2");
+  for (;;)
+  {
+    int value = sharedObjectx->getSharedVariable();
+    Serial.print("Shared Value: ");
+    Serial.println(value);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+
+void task3(void *parameter)
+{
+
+  // SharedClass *sharedObjectx = ((TaskParamsHolder *)parameter)->sharedObj;
+  SharedClass *sharedObjectx = static_cast<SharedClass *>(((TaskParamsHolder *)parameter)->sharedObj);
+
+  Serial.println("task3");
+  for (;;)
+  {
+    // Serial.println("task3!!!");
+    //  sharedObject->setSharedVariable(sharedObject->getSharedVariable() + 1);
+    sharedObjectx->incrementSharedVariable(1);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
+}
+
+// SharedClass *sharedObject;
+TaskParamsHolder paramsX;
+
 void setup()
 {
-  helper.Setup();
-
-  showStartReason();
-
-  helper.wiFiBegin("DarkNet", "7pu77ies77");
-  sensors.begin(); // Start the DS18B20 sensor
-
-  for (int i = 0; i < numReadings; i++)
+  Serial.begin(115200);
+  while (!Serial)
   {
-    readings[i] = 0;
+    /* code */
   }
 
-  pinMode(button1Pin, INPUT_PULLUP);
-  pinMode(button2Pin, INPUT_PULLUP);
+  paramsX.sharedObj = new SharedClass();
+  auto params = &paramsX;
 
-  myServo.attach(servoPin);
+  // void *paramsX; // <--- must go outside this scope.
+  // paramsX = new SharedClass();
+  // auto params = &paramsX;
 
-  Serial.printf("helper.servoHomeAngle: %d\n", helper.servoHomeAngle);
-  myServo.write(helper.servoHomeAngle);
-}
+  // void *params = NULL;
 
-int lastPotValue = -1;
-
-unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
-unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
-
-bool doTempStarted = false;
-
-// String formatDeviceAddress(DeviceAddress deviceAddress)
-// {
-//   String address = "";
-//   for (int i = 0; i < 8; i++)
-//   {
-//     address += String(deviceAddress[i], HEX);
-//     if (i < 7)
-//     {
-//       address += " ";
-//     }
-//   }
-//   return address;
-// }
-
-String formatDeviceAddress(DeviceAddress deviceAddress)
-{
-  String address = "";
-  for (int i = 0; i < 8; i++)
+  auto thisCore = xPortGetCoreID();
+  auto theOtherCore = thisCore;
+  if (theOtherCore == 1)
   {
-    char hexByte[3];                            // Buffer to hold two hex digits + null terminator
-    sprintf(hexByte, "%02X", deviceAddress[i]); // Format with zero padding
-    address += hexByte;
-    if (i < 7)
-    {
-      address += " ";
-    }
+    theOtherCore = 0;
   }
-  return address;
-}
 
-// int64_t currentTime = 0;
-// int64_t startMills = millis();
-// int64_t timeLastChech = millis();
+  Serial.printf("thisCore %d\n", thisCore);
+  Serial.printf("theOtherCore %d\n", theOtherCore);
+  // Serial.printf("objectCore %d\n", sharedObject->objectCore);
+  // sharedObject->objectCore = thisCore;
 
-// void updateTime(void *p)
-// {
-//   for (;;)
-//   {
-//     Serial.print("A-");
-//     Serial.printf("currentTime %lld, upTime %lld\n", currentTime, (millis() - startMills));
-//     currentTime = helper.getTime();
-//     Serial.print("B-");
-//     Serial.printf("currentTime %lld, upTime %lld\n", currentTime, (millis() - startMills));
-//     vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
-//   }
-// }
+  // SharedClass *sharedObjectx = &sharedObject;
+  // Serial.println("TEST");
+  // sharedObjectx->setSharedVariable(1002);
+  // Serial.println(sharedObjectx->getSharedVariable());
+  // delay(1000);
 
-void _doTemp(void *parameter)
-{
-  long flushCount = 0;
-  while (true)
-  {
-    // Serial.println("_doTemp!!!");
-    auto currentMillis = millis();
-    // Serial.print("doTemp() ");
-    sensors.requestTemperatures();
+  xTaskCreatePinnedToCore(task1, "Task1", 10000, params, 1, NULL, thisCore);
 
-    for (int i = 0; i < sensors.getDeviceCount(); i++)
-    {
-      DeviceAddress deviceAddress;
-      sensors.getAddress(deviceAddress, i);
-      auto sensorId = formatDeviceAddress(deviceAddress);
-      // Serial.print("Sensor ");
-      // Serial.printf("%d, %s", i, sensorId.c_str());
-      // Serial.print(": ");
-      // Serial.println(sensors.getTempC(deviceAddress));
+  delay(100);
+  xTaskCreatePinnedToCore(task2, "Task2", 10000, params, 1, NULL, theOtherCore);
 
-      float temperatureC = sensors.getTempC(deviceAddress);
-      auto time = helper.getTime();
-      auto itemCount = helper.recordTemp(sensorId, time, temperatureC);
+  delay(2000);
+  Serial.println("Task3a");
+  xTaskCreatePinnedToCore(task3, "Task3a", 10000, params, 1, NULL, theOtherCore);
 
-      // Serial.printf("'%s': %d items, time: %lld, temperature: %f\n", sensorId.c_str(), itemCount, time, temperatureC);
+  delay(2000);
+  Serial.println("Task3b");
+  xTaskCreatePinnedToCore(task3, "Task3b", 10000, params, 1, NULL, thisCore);
 
-      // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
-    }
-
-    // if (false)
-    // {
-    //   Serial.print(temperatureC);
-    //   Serial.print(" -- ");
-    //   Serial.print(temperatureF);
-    //   Serial.print(" -- ");
-    //   Serial.print(time);
-    //   Serial.print(" -- ");
-    //   Serial.print(itemCount);
-    //   Serial.println();
-    // }
-
-    if (currentMillis - previousTempFlushMillis >= (helper.tempFlushIntevalSec * 1000))
-    {
-
-      previousTempFlushMillis = currentMillis;
-      Serial.printf("FLUSH TIME %ld\n", ++flushCount);
-
-      for (int i = 0; i < sensors.getDeviceCount(); i++)
-      {
-        DeviceAddress deviceAddress;
-        sensors.getAddress(deviceAddress, i);
-        auto sensorId = formatDeviceAddress(deviceAddress);
-        auto itemCount = helper.getRecordCount(sensorId);
-        Serial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
-      }
-
-      helper.flushAllDatatoDB();
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(helper.tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
-  }
-}
-
-void doTemp()
-{
-
-  if (!doTempStarted)
-  {
-
-    Serial.print("xPortGetFreeHeapSize: ");
-    Serial.println(xPortGetFreeHeapSize());
-
-    doTempStarted = true;
-
-    // for (;;)
-    // {
-
-    //   Serial.print("A-");
-    //   Serial.printf("currentTime %lld, upTime %lld\n", currentTime, (millis() - startMills));
-
-    //   if (millis() - timeLastChech > 10000)
-    //   {
-
-    //     delete helper.timeClient;
-
-    //     WiFiUDP ntpUDP;
-    //     helper.timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000); // Time offset in seconds and update interval
-    //     helper.timeClient->begin();
-    //     auto updated = helper.timeClient->update();
-    //     Serial.printf("update %s\n", updated ? "true" : "false");
-    //     timeLastChech = millis();
-    //   }
-
-    //   currentTime = helper.timeClient->getEpochTime() * 1000;
-    //   Serial.print("B-");
-    //   Serial.printf("currentTime %lld, upTime %lld\n", currentTime, (millis() - startMills));
-    //   vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
-    // }
-
-    // xTaskCreate(
-    //     updateTime,   // Function to run on the new thread
-    //     "updateTime", // Name of the task (for debugging)
-    //     1024 * 2,    // Stack size (in bytes) // 8192
-    //     NULL,         // Parameter passed to the task
-    //     1,            // Priority (0-24, higher number means higher priority)
-    //     NULL          // Handle to the task (not used here)
-    // );
-
-    xTaskCreate(
-        _doTemp,  // Function to run on the new thread
-        "doTemp", // Name of the task (for debugging)
-        8192 * 2, // Stack size (in bytes) // 8192
-        NULL,     // Parameter passed to the task
-        1,        // Priority (0-24, higher number means higher priority)
-        NULL      // Handle to the task (not used here)
-    );
-  }
+  delay(2000);
+  Serial.println("Task3c");
+  xTaskCreatePinnedToCore(task3, "Task3c", 10000, params, 1, NULL, theOtherCore);
 }
 
 void loop()
 {
+  Serial.println("loop");
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+/***************************************************/
 
-  auto startTime = micros();
+// const int button1Pin = 2; // update config
+// const int button2Pin = 4; // kill wifi
 
-  doTemp();
+// const int servoPin = 32;
+// const int potPin = 34;
 
-  // Read the state of the button
-  button1State = digitalRead(button1Pin);
-  button2State = digitalRead(button2Pin);
+// int button1State = 0;
+// int button2State = 0;
 
-  // Serial.printf("btn1 %d -- btn2 %d\n", button1State, button2State);
-  if (button2State == HIGH)
-  {
-    // Serial.println("btn2 low");
-    btn2IsDown = false;
-  }
-  else
-  {
+// int potValue = 0;
 
-    if (!btn2IsDown)
-    {
-      Serial.println("btn2 down!!!!!");
-      helper.chaos("wifi");
-      btn2IsDown = true;
-    }
-  }
+// int pressDownHoldTime = 250;
+// int startAngle = 90;
 
-  //   if (button1State == HIGH)
+// Servo myServo; // Create a Servo object
+
+MyIoTHelper helper("SmartAC");
+TempHelper *tempHelper;
+
+// bool btn1IsDown = false;
+// bool btn2IsDown = true;
+
+void _setup()
+{
+
+  helper.Setup();
+
+  Serial.print("Running on core: ");
+  Serial.println(xPortGetCoreID());
+
+  showStartReason();
+
+  helper.wiFiBegin("DarkNet", "7pu77ies77");
+
+  tempHelper = new TempHelper(&helper);
+
+  tempHelper->begin();
+
+  // pinMode(button1Pin, INPUT_PULLUP);
+  // pinMode(button2Pin, INPUT_PULLUP);
+  // myServo.attach(servoPin);
+
+  // Serial.printf("helper.servoHomeAngle: %d\n", helper.servoHomeAngle);
+  // myServo.write(helper.servoHomeAngle);
+}
+
+int lastPotValue = -1;
+
+void _loop()
+{
+
+  // // Read the state of the button
+  // button1State = digitalRead(button1Pin);
+  // button2State = digitalRead(button2Pin);
+
+  // // Serial.printf("btn1 %d -- btn2 %d\n", button1State, button2State);
+  // if (button2State == HIGH)
+  // {
+  //   // Serial.println("btn2 low");
+  //   btn2IsDown = false;
+  // }
+  // else
+  // {
+
+  //   if (!btn2IsDown)
   //   {
-  //     // Serial.println("btn2 low");
-  //     btn1IsDown = false;
+  //     Serial.println("btn2 down!!!!!");
+  //     helper.chaos("wifi");
+  //     btn2IsDown = true;
   //   }
-  //   else
+  // }
+
+  // //   if (button1State == HIGH)
+  // //   {
+  // //     // Serial.println("btn2 low");
+  // //     btn1IsDown = false;
+  // //   }
+  // //   else
+  // //   {
+
+  // //     if (!btn1IsDown)
+  // //     {
+  // //       Serial.println("btn1 down!!!!");
+  // //     }
+  // //     btn1IsDown = true;
+  // //   }
+
+  // if (button1State == LOW)
+  // {
+  //   if (!btn1IsDown)
   //   {
 
-  //     if (!btn1IsDown)
-  //     {
-  //       Serial.println("btn1 down!!!!");
-  //     }
+  //     helper.updateConfig();
+
+  //     Serial.print("angle:");
+  //     Serial.println(helper.servoAngle);
+  //     Serial.print("pressDownHoldTime:");
+  //     Serial.println(helper.pressDownHoldTime);
+
+  //     myServo.write(helper.servoAngle);
+  //     delay(helper.pressDownHoldTime);
+  //     myServo.write(helper.servoHomeAngle);
+
   //     btn1IsDown = true;
   //   }
+  // }
+  // else
+  // {
+  //   btn1IsDown = false;
+  //   // Serial.print("pot:");
+  //   // Serial.print(potValue);
+  //   // Serial.println();
+  //   // Serial.println("Button not pressed.");
+  // }
 
-  if (button1State == LOW)
-  {
-    if (!btn1IsDown)
-    {
-
-      helper.updateConfig();
-
-      Serial.print("angle:");
-      Serial.println(helper.servoAngle);
-      Serial.print("pressDownHoldTime:");
-      Serial.println(helper.pressDownHoldTime);
-
-      myServo.write(helper.servoAngle);
-      delay(helper.pressDownHoldTime);
-      myServo.write(helper.servoHomeAngle);
-
-      btn1IsDown = true;
-    }
-  }
-  else
-  {
-    btn1IsDown = false;
-    // Serial.print("pot:");
-    // Serial.print(potValue);
-    // Serial.println();
-    // Serial.println("Button not pressed.");
-  }
-
-  auto endTime = micros();
-  auto timeTaken = endTime - startTime;
-  if (timeTaken > 16666)
-  {
-    return;
-  }
-  delayMicroseconds(16666 - timeTaken); // Small delay to avoid bouncing issues
+  // auto endTime = micros();
+  // auto timeTaken = endTime - startTime;
+  // if (timeTaken > 16666)
+  // {
+  //   return;
+  // }
+  // delayMicroseconds(16666 - timeTaken); // Small delay to avoid bouncing issues
 }

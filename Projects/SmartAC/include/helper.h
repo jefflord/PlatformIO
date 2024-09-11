@@ -18,6 +18,8 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+#define ONE_WIRE_BUS 19
+
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
 // Define a pair structure to hold data points
@@ -34,6 +36,7 @@ struct SourceData
 using DataStorage = std::vector<SourceData>;
 
 void mySetup();
+void showStartReason();
 
 wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
 
@@ -67,6 +70,7 @@ public:
 
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
 
+    String formatDeviceAddress(DeviceAddress deviceAddress);
     String getStorageAsJson(long long sourceId);
     void flushAllDatatoDB();
     int64_t flushDatatoDB(long long sourceId);
@@ -90,14 +94,18 @@ public:
     static void TaskFunction(void *parameter);
 
     int64_t getSourceId(String name);
-    
+
+    SemaphoreHandle_t mutex; 
 
 private:
     bool hasRtc = false;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
-    int64_t timeLastCheck = millis();
-    
+    int64_t _timeLastCheck = millis();
+
+    void setTimeLastCheck(int64_t value);
+    int64_t getTimeLastCheck();
+
     RTC_DS3231 rtc;
 
     std::unordered_map<std::string, int64_t> sourceIdCache;
@@ -125,6 +133,24 @@ struct TaskParams
 {
     MyIoTHelper *obj;
     String message;
+};
+
+class TempHelper
+{
+public:
+    TempHelper(MyIoTHelper *helper);
+    //~TempHelper(); // Destructor
+
+    OneWire *oneWire;
+    DallasTemperature *sensors;
+    void begin();
+
+private:
+    bool xhasRtc = false;
+    MyIoTHelper *ioTHelper;
+    static void doTemp(void *p);
+    unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
+    unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
 };
 
 #endif
