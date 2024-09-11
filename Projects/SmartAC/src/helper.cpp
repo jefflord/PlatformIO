@@ -556,18 +556,6 @@ void MyIoTHelper::Setup()
 int64_t MyIoTHelper::getTime()
 {
 
-    Serial.println("A");
-    auto xxx = millis();
-    Serial.println(xxx);
-    Serial.println("B");
-
-    Serial.print("Running on core: ");
-    Serial.println(xPortGetCoreID());
-
-    Serial.println(getTimeLastCheck());
-
-    Serial.println("C!!!!!!!!!!!!!!!!!!!");
-
     if (millis() - getTimeLastCheck() > 60000)
     {
         delete timeClient;
@@ -791,56 +779,38 @@ TempHelper::TempHelper(MyIoTHelper *_helper)
 void TempHelper::doTemp(void *parameter)
 {
 
-    TempHelper *thisTempHelper = (TempHelper *)parameter;
-
+    TempHelper *me = static_cast<TempHelper *>(parameter);
     OneWire oneWire(ONE_WIRE_BUS);
-    thisTempHelper->sensors = new DallasTemperature(&oneWire);
-    thisTempHelper->sensors->begin();
+    DallasTemperature sensors(&oneWire);
+    sensors.begin();
 
-    auto helper = thisTempHelper->ioTHelper;
-    auto sensors = thisTempHelper->sensors;
+    auto ioTHelper = me->ioTHelper;
 
     long flushCount = 0;
     while (true)
     {
-        // Serial.println("_doTemp!!!");
         auto currentMillis = millis();
-        // Serial.print("doTemp() ");
-        Serial.println("111");
-        sensors->requestTemperatures();
+        sensors.requestTemperatures();
 
-        Serial.println("222");
-
-        for (int i = 0; i < sensors->getDeviceCount(); i++)
+        for (int i = 0; i < sensors.getDeviceCount(); i++)
         {
-            Serial.println("222bbbb");
             DeviceAddress deviceAddress;
-            sensors->getAddress(deviceAddress, i);
-            Serial.println("ccccccccc");
-            auto sensorId = helper->formatDeviceAddress(deviceAddress);
+            sensors.getAddress(deviceAddress, i);
+            auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
 
-            Serial.println("444444444");
             // Serial.print("Sensor ");
             // Serial.printf("%d, %s", i, sensorId.c_str());
             // Serial.print(": ");
             // Serial.println(sensors.getTempC(deviceAddress));
 
-            Serial.println("444444444xxxxxxxxxxxx");
-            float temperatureC = sensors->getTempC(deviceAddress);
-            Serial.println("444444444xxxxxxxxxxxx222");
-            auto time = helper->getTime();
-            Serial.println("444444444xxxxxxxxxxxx333");
-            auto itemCount = helper->recordTemp(sensorId, time, temperatureC);
-            Serial.println("444444444xxxxxxxxxxxx444");
-
-            Serial.println("5555555555");
+            float temperatureC = sensors.getTempC(deviceAddress);
+            auto time = ioTHelper->getTime();
+            auto itemCount = ioTHelper->recordTemp(sensorId, time, temperatureC);
 
             Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, temperatureC);
 
             // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
         }
-
-        Serial.println("33");
 
         // if (false)
         // {
@@ -854,37 +824,71 @@ void TempHelper::doTemp(void *parameter)
         //   Serial.println();
         // }
 
-        if (currentMillis - thisTempHelper->previousTempFlushMillis >= (helper->tempFlushIntevalSec * 1000))
+        if (currentMillis - me->previousTempFlushMillis >= (ioTHelper->tempFlushIntevalSec * 1000))
         {
 
-            thisTempHelper->previousTempFlushMillis = currentMillis;
+            me->previousTempFlushMillis = currentMillis;
             Serial.printf("FLUSH TIME %ld\n", ++flushCount);
 
-            for (int i = 0; i < sensors->getDeviceCount(); i++)
+            for (int i = 0; i < sensors.getDeviceCount(); i++)
             {
                 DeviceAddress deviceAddress;
-                sensors->getAddress(deviceAddress, i);
-                auto sensorId = helper->formatDeviceAddress(deviceAddress);
-                auto itemCount = helper->getRecordCount(sensorId);
+                sensors.getAddress(deviceAddress, i);
+                auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
+                auto itemCount = ioTHelper->getRecordCount(sensorId);
                 Serial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
             }
 
-            helper->flushAllDatatoDB();
+            ioTHelper->flushAllDatatoDB();
         }
 
-        vTaskDelay(pdMS_TO_TICKS(helper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
+        vTaskDelay(pdMS_TO_TICKS(ioTHelper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
     }
 }
+
+void doTempX(void *parameter)
+{
+
+    // TempHelper *me = static_cast<TempHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
+    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
+
+    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(parameter);
+
+    TempHelper *th = static_cast<TempHelper *>(parameter);
+    MyIoTHelper *ioTHelper = th->ioTHelper;
+
+    while (true)
+    {
+        Serial.print("helper->getTime(): ");
+        Serial.println(ioTHelper->_timeLastCheck);
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
+    }
+}
+
+//TaskParamsHolder params;
 
 void TempHelper::begin()
 {
 
+    // // params.sharedObj = ioTHelper;
+    // params.sharedObj = new MyIoTHelper("SmartAC");
+
+    // MyIoTHelper *p_ioTHelper = static_cast<MyIoTHelper *>(params.sharedObj);
+
+    // Serial.print("1 ############################: ");
+    // Serial.println(p_ioTHelper->_timeLastCheck);
+    // delay(1000);
+
+    // Serial.print("2 ############################: ");
+    // Serial.println(ioTHelper->_timeLastCheck);
+    // delay(1000);
+
     xTaskCreate(
-        doTemp,    // Function to run on the new thread
-        "doTemp",  // Name of the task (for debugging)
-        8192 * 8,  // Stack size (in bytes) // 8192
-        ioTHelper, // Parameter passed to the task
-        1,         // Priority (0-24, higher number means higher priority)
-        NULL       // Handle to the task (not used here)
+        doTemp,   // Function to run on the new thread
+        "doTemp", // Name of the task (for debugging)
+        8192 * 2, // Stack size (in bytes) // 8192
+        this,     // Parameter passed to the task
+        1,        // Priority (0-24, higher number means higher priority)
+        NULL      // Handle to the task (not used here)
     );
 }

@@ -20,6 +20,11 @@
 
 #define ONE_WIRE_BUS 19
 
+// struct TaskParamsHolder
+// {
+//     void *sharedObj;
+// };
+
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
 // Define a pair structure to hold data points
@@ -95,13 +100,14 @@ public:
 
     int64_t getSourceId(String name);
 
-    SemaphoreHandle_t mutex; 
+    SemaphoreHandle_t mutex;
+
+    int64_t _timeLastCheck = millis();
 
 private:
     bool hasRtc = false;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
-    int64_t _timeLastCheck = millis();
 
     void setTimeLastCheck(int64_t value);
     int64_t getTimeLastCheck();
@@ -141,13 +147,14 @@ public:
     TempHelper(MyIoTHelper *helper);
     //~TempHelper(); // Destructor
 
-    OneWire *oneWire;
-    DallasTemperature *sensors;
+    // OneWire *oneWire;
+    // DallasTemperature *sensors;
+    MyIoTHelper *ioTHelper;
     void begin();
 
 private:
     bool xhasRtc = false;
-    MyIoTHelper *ioTHelper;
+    
     static void doTemp(void *p);
     unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
     unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
