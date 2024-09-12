@@ -1,64 +1,18 @@
 #include <Arduino.h>
+#include "utils.h"
 #include "M5StickCPlus2.h"
 #include "esp32/ulp.h"
 #include <chrono>
+#include "esp_sleep.h"
 
 #define BTN_A 37
 #define BTN_B 39
 #define BTN_C 35
 #define BTN_C 35
 
-void showStartReason()
-{
-  esp_reset_reason_t reason = esp_reset_reason();
-
-  Serial.print("Reset reason: ");
-  long delayMs = 0;
-
-  switch (reason)
-  {
-  case ESP_RST_POWERON:
-    Serial.println("Power on reset");
-    break;
-  case ESP_RST_EXT:
-    Serial.println("External reset");
-    break;
-  case ESP_RST_SW:
-    Serial.println("Software reset");
-    break;
-  case ESP_RST_PANIC:
-    Serial.println("Exception/panic reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_INT_WDT:
-    Serial.println("Interrupt watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_TASK_WDT:
-    Serial.println("Task watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_WDT:
-    Serial.println("Other watchdog reset");
-    delayMs = 1000;
-    break;
-  case ESP_RST_DEEPSLEEP:
-    Serial.println("Deep sleep reset");
-    break;
-  case ESP_RST_BROWNOUT:
-    Serial.println("Brownout reset");
-    break;
-  case ESP_RST_SDIO:
-    Serial.println("SDIO reset");
-    break;
-  default:
-    Serial.println("Unknown reset reason");
-    break;
-  }
-
-  // delay(delayMs);
-}
-
+auto _mutex = xSemaphoreCreateMutex();
+int btnCounter = 0;
+int busySecs = 0;
 hw_timer_t *timer = NULL;
 
 void IRAM_ATTR onTimer()
@@ -84,6 +38,8 @@ void busyWait(int milliseconds)
       x += i;
     }
   }
+
+  busySecs += milliseconds;
 }
 
 void timerCallback(TimerHandle_t xTimer)
@@ -110,6 +66,15 @@ void setup()
   // StickCP2.Display.setTextFont(&fonts::Orbitron_Light_24);
   StickCP2.Display.setTextSize(3);
   StickCP2.Display.setBrightness(50);
+
+  // StickCP2.Power.deepSleep(0);
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); // Disable all wakeup sources.
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+
+  // StickCP2.Power.Axp192.set
+  // StickCP2.Power.Axp2101.setlow
+  // M5.Power.Axp192;
+  // M5.Power.Axp2101;
 
   M5.begin();
 
@@ -174,19 +139,30 @@ void setup()
           {
             for (int i = 0; i < 5; i++)
             {
-              StickCP2.Display.setTextColor(PURPLE);
-              vTaskDelay(500 / portTICK_PERIOD_MS);
-              StickCP2.Display.setTextColor(RED);
-              vTaskDelay(500 / portTICK_PERIOD_MS);
+              if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE)
+              {
+                StickCP2.Display.setTextColor(PURPLE);
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                StickCP2.Display.setTextColor(RED);
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                xSemaphoreGive(_mutex);
+              }
             }
           }
 
           Serial.printf("BAT: %dmv\n", vol);
-          StickCP2.Display.clear();
-          StickCP2.Display.setCursor(0, 30);
-          StickCP2.Display.printf("BAT: %dmv\nuptime: %ld", vol, millis() / 1000l);
+
+          if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE)
+          {
+            StickCP2.Display.clear();
+            StickCP2.Display.setCursor(0, 30);
+            StickCP2.Display.printf("BAT: %dmv\nuptime: %ld\nBusy: %d", vol, millis() / 1000l, busySecs / 1000);
+            StickCP2.Display.setBrightness(50);
+            xSemaphoreGive(_mutex);
+          }
+
           vTaskDelay(1000 / portTICK_PERIOD_MS);
-          StickCP2.Display.setBrightness(50);
+
           // showStartReason();
         }
       },
@@ -206,10 +182,16 @@ void loop()
 
   if (buttonAState == LOW)
   {
-    Serial.println("Button A Pressed!");
-    // Wake up after 5 seconds
-    // esp_sleep_enable_timer_wakeup(5 * 1000000); // 5 seconds * 1,000,000 microseconds/second
-    // esp_deep_sleep_start();
+    if (xSemaphoreTake(_mutex, portMAX_DELAY) == pdTRUE)
+    {
+      Serial.println("Button A Pressed!");
+      StickCP2.Display.clear();
+      StickCP2.Display.setCursor(0, 30);
+      StickCP2.Display.printf("Press %d\n", ++btnCounter);
+      StickCP2.Display.setBrightness(50);
+      xSemaphoreGive(_mutex);
+    }
+    busyWait(33);
   }
 
   if (buttonBState == LOW)
@@ -222,6 +204,5 @@ void loop()
     Serial.println("Button C Pressed!");
   }
 
-  busyWait(33);
   delay(16);
 }
