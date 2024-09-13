@@ -13,16 +13,16 @@
 auto _mutex = xSemaphoreCreateMutex();
 int btnCounter = 0;
 int busySecs = 0;
-hw_timer_t *timer = NULL;
+// hw_timer_t *timer = NULL;
 
-void IRAM_ATTR onTimer()
-{
-  // Perform your tasks here (if any)
+// void IRAM_ATTR onTimer()
+// {
+//   // Perform your tasks here (if any)
 
-  // Go back to light sleep (adjust duration as needed)
-  esp_sleep_enable_timer_wakeup(1 * 1000000ULL); // 5 seconds
-  esp_light_sleep_start();
-}
+//   // Go back to light sleep (adjust duration as needed)
+//   esp_sleep_enable_timer_wakeup(1 * 1000000ULL); // 5 seconds
+//   esp_light_sleep_start();
+// }
 
 void busyWait(int milliseconds)
 {
@@ -65,11 +65,11 @@ void setup()
   StickCP2.Display.setTextDatum(middle_center);
   // StickCP2.Display.setTextFont(&fonts::Orbitron_Light_24);
   StickCP2.Display.setTextSize(3);
-  StickCP2.Display.setBrightness(50);
+  StickCP2.Display.setBrightness(255);
 
   // StickCP2.Power.deepSleep(0);
-  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); // Disable all wakeup sources.
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); // Disable all wakeup sources.
+  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
 
   // StickCP2.Power.Axp192.set
   // StickCP2.Power.Axp2101.setlow
@@ -157,7 +157,7 @@ void setup()
             StickCP2.Display.clear();
             StickCP2.Display.setCursor(0, 30);
             StickCP2.Display.printf("BAT: %dmv\nuptime: %ld\nBusy: %d", vol, millis() / 1000l, busySecs / 1000);
-            StickCP2.Display.setBrightness(50);
+            StickCP2.Display.setBrightness(255);
             xSemaphoreGive(_mutex);
           }
 
@@ -188,7 +188,7 @@ void loop()
       StickCP2.Display.clear();
       StickCP2.Display.setCursor(0, 30);
       StickCP2.Display.printf("Press %d\n", ++btnCounter);
-      StickCP2.Display.setBrightness(50);
+      StickCP2.Display.setBrightness(255);
       xSemaphoreGive(_mutex);
     }
     busyWait(33);

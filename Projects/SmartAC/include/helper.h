@@ -14,16 +14,20 @@
 #include <WiFiUdp.h>
 #include <RTClib.h>
 #include <unordered_map>
+#include <time.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+#include <Arduino_GFX_Library.h>
+
 #define ONE_WIRE_BUS 19
 
-// struct TaskParamsHolder
-// {
-//     void *sharedObj;
-// };
+#define OLED_CS 5
+#define OLED_DC 21
+#define OLED_RES 22
+#define OLED_SDA 23
+#define OLED_SCL 18
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
@@ -76,18 +80,8 @@ public:
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
 
     String formatDeviceAddress(DeviceAddress deviceAddress);
-    String getStorageAsJson(long long sourceId);
-    void flushAllDatatoDB();
-    int64_t flushDatatoDB(long long sourceId);
 
-    size_t recordTemp(String name, int64_t time, float temperatureC);
-
-    size_t getRecordCount(String name);
-
-    void clearSource(String name);
-    void clearSource(long long sourceId);
-    void clearSource();
-
+    String getFormattedTime();
     int64_t getTime();
 
     Preferences preferences;
@@ -96,18 +90,22 @@ public:
 
     String configName;
 
-    static void TaskFunction(void *parameter);
-
     int64_t getSourceId(String name);
 
     SemaphoreHandle_t mutex;
 
     int64_t _timeLastCheck = millis();
+    void parseConfig(const String &config);
+
+    const String url = "https://5p9y34b4f9.execute-api.us-east-2.amazonaws.com/test";
+
+    String wifi_ssid = "";
+    String wifi_password = "";
 
 private:
     bool hasRtc = false;
     WiFiUDP ntpUDP;
-    NTPClient *timeClient;
+    NTPClient *timeClient = NULL;
 
     void setTimeLastCheck(int64_t value);
     int64_t getTimeLastCheck();
@@ -122,17 +120,9 @@ private:
     // Private members (accessible only within the class)
     bool configHasBeenDownloaded = false;
 
-    String wifi_ssid = "";
-    String wifi_password = "";
-
     void internalUpdateConfig();
 
-    void parseConfig(const String &config);
     bool hasTimePassed();
-
-    DataStorage storage;
-
-    const String url = "https://5p9y34b4f9.execute-api.us-east-2.amazonaws.com/test";
 };
 
 struct TaskParams
@@ -141,10 +131,10 @@ struct TaskParams
     String message;
 };
 
-class TempHelper
+class TempRecorder
 {
 public:
-    TempHelper(MyIoTHelper *helper);
+    TempRecorder(MyIoTHelper *helper);
     //~TempHelper(); // Destructor
 
     // OneWire *oneWire;
@@ -152,12 +142,46 @@ public:
     MyIoTHelper *ioTHelper;
     void begin();
 
+    void clearSource(String name);
+    void clearSource(long long sourceId);
+    void clearSource();
+
+    void flushAllDatatoDB();
+    int64_t flushDatatoDB(long long sourceId);
+    String getStorageAsJson(long long sourceId);
+
+    float temperatureC[3];
+
+
 private:
     bool xhasRtc = false;
-    
+
+    DataStorage storage;
+
+    size_t recordTemp(String name, int64_t time, float temperatureC);
+    size_t getRecordCount(String name);
     static void doTemp(void *p);
     unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
     unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
+};
+
+class DisplayUpdater
+{
+public:
+    DisplayUpdater(MyIoTHelper *helper, TempRecorder *tempRecorder);
+    //~TempHelper(); // Destructor
+
+    // OneWire *oneWire;
+    // DallasTemperature *sensors;
+    MyIoTHelper *ioTHelper;
+    TempRecorder *tempRecorder;
+    void begin();
+
+    Arduino_GFX *gfx;
+
+    portMUX_TYPE screenLock = portMUX_INITIALIZER_UNLOCKED;
+
+private:
 };
 
 #endif

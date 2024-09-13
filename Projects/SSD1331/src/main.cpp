@@ -3,7 +3,7 @@
 #include <bmp.h>
 #include <SPI.h>
 #include <ESP32Servo.h>
-#include <U8g2lib.h>
+//#include <U8g2lib.h>
 #include <Arduino_GFX_Library.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -30,7 +30,7 @@
 #define TOUCH_PIN 33
 #define SET_CUR_TOP_Y 16 - 16
 #define FONT_SIZE 2
-#define GFX_BL DF_GFX_BL // Backlight control pin
+//#define GFX_BL DF_GFX_BL // Backlight control pin
 #define SWITCH_PIN 16
 #define TEST_PWM_RESOLUTION false
 #define LED_ONBOARD 2

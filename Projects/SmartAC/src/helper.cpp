@@ -111,7 +111,7 @@ int64_t MyIoTHelper::getSourceId(String name)
     }
 }
 
-String MyIoTHelper::getStorageAsJson(long long sourceId)
+String TempRecorder::getStorageAsJson(long long sourceId)
 {
 
     // Create a JSON document
@@ -146,7 +146,7 @@ String MyIoTHelper::getStorageAsJson(long long sourceId)
     return "";
 }
 
-void MyIoTHelper::clearSource()
+void TempRecorder::clearSource()
 {
     for (auto &source : storage)
     {
@@ -154,7 +154,7 @@ void MyIoTHelper::clearSource()
     }
 }
 
-void MyIoTHelper::clearSource(long long sourceId)
+void TempRecorder::clearSource(long long sourceId)
 {
 
     for (auto &source : storage)
@@ -166,10 +166,10 @@ void MyIoTHelper::clearSource(long long sourceId)
     }
 }
 
-void MyIoTHelper::clearSource(String name)
+void TempRecorder::clearSource(String name)
 {
 
-    auto sourceId = getSourceId(name);
+    auto sourceId = ioTHelper->getSourceId(name);
 
     for (auto &source : storage)
     {
@@ -180,7 +180,7 @@ void MyIoTHelper::clearSource(String name)
     }
 }
 
-void MyIoTHelper::flushAllDatatoDB()
+void TempRecorder::flushAllDatatoDB()
 {
 
     for (auto &source : storage)
@@ -192,7 +192,7 @@ void MyIoTHelper::flushAllDatatoDB()
     }
 }
 
-int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
+int64_t TempRecorder::flushDatatoDB(long long sourceId)
 {
 
     JsonDocument doc;
@@ -200,7 +200,7 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
     // Populate the JSON document
     doc["headers"]["Authorization"] = "letmein";
     doc["queryStringParameters"]["action"] = "addTemps";
-    doc["queryStringParameters"]["configName"] = configName;
+    doc["queryStringParameters"]["configName"] = ioTHelper->configName;
     doc["httpMethod"] = "POST";
     doc["body"] = getStorageAsJson(sourceId);
 
@@ -211,21 +211,11 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
     // Print the JSON payload to the Serial Monitor
     // Serial.println(jsonPayload);
 
-    if (testJsonBeforeSend)
-    {
-        DeserializationError error = deserializeJson(doc, jsonPayload);
-        if (error)
-        {
-            Serial.printf("Failed to parse JSON: %s\n", error.c_str());
-            return (int64_t)-1;
-        }
-    }
-
     // Serial.printf("flushDatatoDB! %d\n", sourceId);
     // Serial.print("jsonPayload:");
     // Serial.println(jsonPayload);
 
-    if (!sendToDb)
+    if (!ioTHelper->sendToDb)
     {
         Serial.println("Skipping sendToDb");
         clearSource();
@@ -234,11 +224,11 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        ioTHelper->wiFiBegin(ioTHelper->wifi_ssid, ioTHelper->wifi_password);
     }
 
     HTTPClient http;
-    http.begin(url);
+    http.begin(ioTHelper->url);
 
     int httpCode = http.POST(jsonPayload);
 
@@ -277,7 +267,7 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
         auto id = strtoll(val.c_str(), &end, 10); // Base 10
         clearSource(sourceId);
 
-        parseConfig(config);
+        ioTHelper->parseConfig(config);
 
         // Serial.print("addTemps: ");
         // Serial.println(id);
@@ -285,10 +275,10 @@ int64_t MyIoTHelper::flushDatatoDB(long long sourceId)
     }
 }
 
-size_t MyIoTHelper::getRecordCount(String name)
+size_t TempRecorder::getRecordCount(String name)
 {
 
-    auto sourceId = getSourceId(name);
+    auto sourceId = ioTHelper->getSourceId(name);
 
     // Serial.print("sourceId:");
     // Serial.println(sourceId);
@@ -304,10 +294,10 @@ size_t MyIoTHelper::getRecordCount(String name)
     return 0;
 }
 
-size_t MyIoTHelper::recordTemp(String name, int64_t time, float temperatureC)
+size_t TempRecorder::recordTemp(String name, int64_t time, float temperatureC)
 {
 
-    auto sourceId = getSourceId(name);
+    auto sourceId = ioTHelper->getSourceId(name);
 
     // Serial.print("sourceId:");
     // Serial.println(sourceId);
@@ -367,12 +357,17 @@ void MyIoTHelper::updateConfig()
         params->obj = this;
 
         xTaskCreate(
-            MyIoTHelper::TaskFunction, // Function to run on the new thread
-            "internalUpdateConfig",    // Name of the task (for debugging)
-            4096,                      // Stack size (in bytes)
-            params,                    // Parameter passed to the task
-            1,                         // Priority (0-24, higher number means higher priority)
-            NULL                       // Handle to the task (not used here)
+            [](void *parameter)
+            {
+                TaskParams *params = static_cast<TaskParams *>(parameter);
+                params->obj->internalUpdateConfig();
+                vTaskDelete(NULL);
+            },                      // Function to run on the new thread
+            "internalUpdateConfig", // Name of the task (for debugging)
+            4096,                   // Stack size (in bytes)
+            params,                 // Parameter passed to the task
+            1,                      // Priority (0-24, higher number means higher priority)
+            NULL                    // Handle to the task (not used here)
         );
     }
     else
@@ -389,13 +384,6 @@ void MyIoTHelper::chaos(const String &mode)
         Serial.println("killing wifi");
         WiFi.disconnect(false);
     }
-}
-
-void MyIoTHelper::TaskFunction(void *parameter)
-{
-    TaskParams *params = static_cast<TaskParams *>(parameter);
-    params->obj->internalUpdateConfig();
-    vTaskDelete(NULL);
 }
 
 void MyIoTHelper::internalUpdateConfig()
@@ -540,6 +528,7 @@ void MyIoTHelper::Setup()
     while (!Serial)
         continue;
 
+    showStartReason();
     Serial.print("File: ");
     Serial.print(PROJECT_SRC_DIR);
     Serial.print(" (");
@@ -555,12 +544,17 @@ void MyIoTHelper::Setup()
 
 int64_t MyIoTHelper::getTime()
 {
+    if (timeClient == NULL)
+    {
+        Serial.println("getTime: timeClient not set yet.");
+        return 1726189566 * 1000;
+    }
 
     if (millis() - getTimeLastCheck() > 60000)
     {
         delete timeClient;
         WiFiUDP ntpUDP;
-        timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000); // Time offset in seconds and update interval
+        timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000); // Time offset in seconds and update interval
         timeClient->begin();
         auto updated = timeClient->update();
         // Serial.printf("update %s\n", updated ? "true" : "false");
@@ -573,6 +567,26 @@ int64_t MyIoTHelper::getTime()
     // unsigned long currentMillis = millis();
     // int64_t elapsedMillis = currentMillis - lastNTPReadMillis;
     // return lastNTPTime + elapsedMillis;
+}
+
+String MyIoTHelper::getFormattedTime()
+{
+
+    // if (timeClient == NULL)
+    // {
+    //     Serial.println("getFormattedTime: timeClient not set yet.");
+    //     return "12:12:12";
+    //     // return 1726187296l * 1000l; // + (millis() / 1000);
+    // }
+
+    struct tm *timeinfo;
+    char timeStringBuff[12];
+    auto lastNTPTime = getTime() / 1000;
+    // Serial.println(lastNTPTime);
+    timeinfo = localtime((time_t *)&lastNTPTime);
+    strftime(timeStringBuff, sizeof(timeStringBuff), "%I:%M %p", timeinfo);
+
+    return String(timeStringBuff);
 }
 
 int64_t MyIoTHelper::getTimeLastCheck()
@@ -615,39 +629,9 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
 
-    hasRtc = true;
-    if (!rtc.begin())
-    {
-        hasRtc = false;
-        Serial.println("Couldn't find RTC");
-    }
-    else
-    {
-        Serial.println("Found RTC");
-    }
-
-    if (hasRtc && rtc.lostPower())
-    {
-        Serial.println("RTC lost power, setting the time!");
-        // Set the RTC to the date & time this sketch was compiled
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
-
-    if (hasRtc)
-    {
-        // Set RTC with NTP time
-        DateTime now = DateTime(timeClient->getEpochTime());
-        rtc.adjust(now);
-        Serial.println("RTC set to NTP time");
-    }
-    else
-    {
-        Serial.println("Manual time keeping");
-        // Store the current NTP time and millis()
-        timeClient->update();
-        lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
-        lastNTPReadMillis = millis();
-    }
+    timeClient->update();
+    lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+    lastNTPReadMillis = millis();
 
     updateConfig();
 
@@ -771,15 +755,21 @@ void showStartReason()
     // delay(delayMs);
 }
 
-TempHelper::TempHelper(MyIoTHelper *_helper)
+TempRecorder::TempRecorder(MyIoTHelper *_helper)
 {
     ioTHelper = _helper;
 }
 
-void TempHelper::doTemp(void *parameter)
+DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder)
+{
+    ioTHelper = _helper;
+    tempRecorder = _tempRecorder;
+}
+
+void TempRecorder::doTemp(void *parameter)
 {
 
-    TempHelper *me = static_cast<TempHelper *>(parameter);
+    TempRecorder *me = static_cast<TempRecorder *>(parameter);
     OneWire oneWire(ONE_WIRE_BUS);
     DallasTemperature sensors(&oneWire);
     sensors.begin();
@@ -803,11 +793,11 @@ void TempHelper::doTemp(void *parameter)
             // Serial.print(": ");
             // Serial.println(sensors.getTempC(deviceAddress));
 
-            float temperatureC = sensors.getTempC(deviceAddress);
+            me->temperatureC[i] = sensors.getTempC(deviceAddress);
             auto time = ioTHelper->getTime();
-            auto itemCount = ioTHelper->recordTemp(sensorId, time, temperatureC);
+            auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
 
-            Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, temperatureC);
+            Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
 
             // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
         }
@@ -835,11 +825,11 @@ void TempHelper::doTemp(void *parameter)
                 DeviceAddress deviceAddress;
                 sensors.getAddress(deviceAddress, i);
                 auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
-                auto itemCount = ioTHelper->getRecordCount(sensorId);
+                auto itemCount = me->getRecordCount(sensorId);
                 Serial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
             }
 
-            ioTHelper->flushAllDatatoDB();
+            me->flushAllDatatoDB();
         }
 
         vTaskDelay(pdMS_TO_TICKS(ioTHelper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
@@ -854,7 +844,7 @@ void doTempX(void *parameter)
 
     // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(parameter);
 
-    TempHelper *th = static_cast<TempHelper *>(parameter);
+    TempRecorder *th = static_cast<TempRecorder *>(parameter);
     MyIoTHelper *ioTHelper = th->ioTHelper;
 
     while (true)
@@ -865,9 +855,140 @@ void doTempX(void *parameter)
     }
 }
 
-//TaskParamsHolder params;
+// TaskParamsHolder params;
 
-void TempHelper::begin()
+void updateDisplay(void *parameter)
+{
+    DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
+
+    /**/
+    auto animationShowing = false;
+    auto forceUpdate = false;
+    const int SET_CUR_TOP_Y = 16 - 16;
+    const int FONT_SIZE = 2;
+    /**/
+    auto gfx = me->gfx;
+
+    gfx->begin();
+
+    gfx->setTextSize(FONT_SIZE);
+    gfx->fillScreen(BLACK);
+
+    long loopDelayMs = 1000;
+    // long lastRun = 0;
+
+    double lastT1 = 0;
+    double lastT2 = 0;
+    double lastT3 = 0;
+
+    auto lastUpdateTimeMillis = millis();
+    for (;;)
+    {
+
+        auto startTime = millis();
+        if (animationShowing)
+        {
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+            forceUpdate = true;
+            continue;
+        }
+
+        // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
+        // sprintf(timeString, "%4.1f\u00B0C", temperature_1_C);
+
+        // temperature_0_C = round(temperature_0_C * 10) / 10.0;
+        // temperature_1_C = round(temperature_1_C * 10) / 10.0;
+        // temperature_2_C = round(temperature_2_C * 10) / 10.0;
+
+        auto temperature_0_C = me->tempRecorder->temperatureC[0];
+        auto temperature_1_C = me->tempRecorder->temperatureC[1];
+        auto temperature_2_C = me->tempRecorder->temperatureC[2];
+
+        temperature_0_C = round(temperature_0_C);
+        temperature_1_C = round(temperature_1_C);
+        temperature_2_C = round(temperature_2_C);
+
+        auto temperatureF1 = (temperature_0_C * (9.0 / 5.0)) + 32;
+        auto temperatureF2 = (temperature_1_C * (9.0 / 5.0)) + 32;
+        auto temperatureF3 = (temperature_2_C * (9.0 / 5.0)) + 32;
+
+        auto timeSinceLast = millis() - lastUpdateTimeMillis;
+        if (timeSinceLast > 10000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
+        {
+            Serial.println("Display update...");
+
+            lastUpdateTimeMillis = millis();
+            forceUpdate = false;
+            lastT1 = temperatureF1;
+            lastT2 = temperatureF2;
+            lastT3 = temperatureF3;
+
+            // taskENTER_CRITICAL(&me->screenLock);
+
+            gfx->setTextColor(WHITE);
+
+            gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
+            // char randomChar = (char)random(97, 127);
+            gfx->setCursor(0, SET_CUR_TOP_Y + 16);
+
+            // if (uploadingData)
+            // {
+            //   renderUploadIcon();
+            // }
+
+            gfx->println(me->ioTHelper->getFormattedTime());
+
+            gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
+
+            char bufferForNumber[20];
+
+            gfx->setTextColor(BLUE);
+            sprintf(bufferForNumber, "%2.0f", temperatureF1);
+            gfx->print(bufferForNumber);
+            // gfx->setTextSize(FONT_SIZE - 1);
+            // gfx->print(getDecimalPart(temperatureF1));
+            gfx->setTextSize(FONT_SIZE);
+
+            auto y = gfx->getCursorY();
+            gfx->setCursor(gfx->getCursorX() + 12, y);
+            gfx->setTextColor(RED);
+            sprintf(bufferForNumber, "%2.0f", temperatureF2);
+            gfx->print(bufferForNumber);
+            // gfx->setTextSize(FONT_SIZE - 1);
+            // gfx->print(getDecimalPart(temperatureF2));
+            gfx->setTextSize(FONT_SIZE);
+
+            gfx->setCursor(gfx->getCursorX() + 12, y);
+            gfx->setTextColor(GREEN);
+            sprintf(bufferForNumber, "%2.0f", temperatureF3);
+            gfx->print(bufferForNumber);
+            // gfx->setTextSize(FONT_SIZE - 1);
+            // gfx->print(getDecimalPart(temperatureF3));
+            gfx->setTextSize(FONT_SIZE);
+
+            // taskEXIT_CRITICAL(&me->screenLock);
+        }
+
+        vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS);
+    }
+}
+
+void DisplayUpdater::begin()
+{
+    Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
+    gfx = new Arduino_SSD1331(bus, OLED_RES);
+
+    xTaskCreate(
+        updateDisplay,   // Function to run on the new thread
+        "updateDisplay", // Name of the task (for debugging)
+        8192 * 2,        // Stack size (in bytes) // 8192
+        this,            // Parameter passed to the task
+        1,               // Priority (0-24, higher number means higher priority)
+        NULL             // Handle to the task (not used here)
+    );
+}
+
+void TempRecorder::begin()
 {
 
     // // params.sharedObj = ioTHelper;

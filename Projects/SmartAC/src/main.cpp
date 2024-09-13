@@ -11,6 +11,9 @@ To Do:
 #include <ESP32Servo.h>
 #include "helper.h"
 
+/**************/
+
+/**************/
 /***************************************************/
 
 // const int button1Pin = 2; // update config
@@ -30,7 +33,8 @@ To Do:
 // Servo myServo; // Create a Servo object
 
 MyIoTHelper helper("SmartAC");
-TempHelper *tempHelper;
+TempRecorder *tempRecorder;
+DisplayUpdater *displayUpdater;
 
 // bool btn1IsDown = false;
 // bool btn2IsDown = true;
@@ -40,16 +44,15 @@ void setup()
 
   helper.Setup();
 
-  Serial.print("Running on core: ");
-  Serial.println(xPortGetCoreID());
-
-  showStartReason();
+  tempRecorder = new TempRecorder(&helper);
+  displayUpdater = new DisplayUpdater(&helper, tempRecorder);
+  displayUpdater->begin();
 
   helper.wiFiBegin("DarkNet", "7pu77ies77");
 
-  tempHelper = new TempHelper(&helper);
+  
+  tempRecorder->begin();
 
-  tempHelper->begin();
 
   // pinMode(button1Pin, INPUT_PULLUP);
   // pinMode(button2Pin, INPUT_PULLUP);
