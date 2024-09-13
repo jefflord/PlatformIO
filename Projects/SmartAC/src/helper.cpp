@@ -4,12 +4,40 @@
 #define PROJECT_SRC_DIR "PROJECT_SRC_DIR"
 #endif
 
+bool x_resetWifi = false;
+void _resetWifi(void *p)
+{
+    for (;;)
+    {
+        if (x_resetWifi)
+        {
+            Serial.println("killing wifi");
+            WiFi.disconnect(false);
+            x_resetWifi = false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(16));
+    }
+}
+
+void MyIoTHelper::resetWifi()
+{
+    x_resetWifi = true;
+}
+
 MyIoTHelper::MyIoTHelper(const String &name)
 {
 
     mutex = xSemaphoreCreateMutex();
     setTimeLastCheck(millis());
     configName = name;
+    xTaskCreate(
+        _resetWifi,             // Function to run on the new thread
+        "internalUpdateConfig", // Name of the task (for debugging)
+        4096,                   // Stack size (in bytes)
+        NULL,                   // Parameter passed to the task
+        1,                      // Priority (0-24, higher number means higher priority)
+        NULL                    // Handle to the task (not used here)
+    );
 }
 
 MyIoTHelper::~MyIoTHelper()
@@ -383,6 +411,7 @@ void MyIoTHelper::chaos(const String &mode)
     {
         Serial.println("killing wifi");
         WiFi.disconnect(false);
+        Serial.println("killing wifi done");
     }
 }
 

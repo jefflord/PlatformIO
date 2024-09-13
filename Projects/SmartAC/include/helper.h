@@ -32,6 +32,7 @@
 
 #define TOUCH_PIN 33
 #define LED_ONBOARD 2
+#define SERVO_PIN 32
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
@@ -80,6 +81,8 @@ public:
     int tempFlushIntevalSec = 30;
 
     /****/
+
+    void resetWifi();
 
     std::chrono::steady_clock::time_point lastConfigUpdateTime = std::chrono::steady_clock::time_point::min();
 
