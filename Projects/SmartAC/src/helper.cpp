@@ -547,7 +547,7 @@ int64_t MyIoTHelper::getTime()
     if (timeClient == NULL)
     {
         Serial.println("getTime: timeClient not set yet.");
-        return 1726189566 * 1000;
+        return 1726189566ll * 1000ll;
     }
 
     if (millis() - getTimeLastCheck() > 60000)
@@ -762,6 +762,7 @@ TempRecorder::TempRecorder(MyIoTHelper *_helper)
 
 DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder)
 {
+    mutex = xSemaphoreCreateMutex();
     ioTHelper = _helper;
     tempRecorder = _tempRecorder;
 }
@@ -857,7 +858,37 @@ void doTempX(void *parameter)
 
 // TaskParamsHolder params;
 
-void updateDisplay(void *parameter)
+void DisplayUpdater::renderClickIcon(bool _showRenderClickIcon)
+{
+
+    showRenderClickIcon = _showRenderClickIcon;
+    if (showRenderClickIcon)
+    {
+        xTaskCreate(DisplayUpdater::_renderClickIcon, "renderClickIcon", 2048, this, 1, NULL);
+    }
+}
+
+void DisplayUpdater::_renderClickIcon(void *parameter)
+{
+    DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
+    auto gfx = me->gfx;
+
+    while (me->showRenderClickIcon)
+    {
+        xSemaphoreTake(me->mutex, portMAX_DELAY);
+        gfx->fillRect(0, 0, 13, 13, BLACK);
+        gfx->drawXBitmap(0, 0, epd_bitmap_icons8_natural_user_interface_2_13, 13, 13, WHITE);
+        xSemaphoreGive(me->mutex);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        xSemaphoreTake(me->mutex, portMAX_DELAY);
+        gfx->fillRect(0, 0, 13, 13, BLACK);
+        xSemaphoreGive(me->mutex);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
+void DisplayUpdater::updateDisplay(void *parameter)
 {
     DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
 
@@ -915,7 +946,7 @@ void updateDisplay(void *parameter)
         auto timeSinceLast = millis() - lastUpdateTimeMillis;
         if (timeSinceLast > 10000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
         {
-            Serial.println("Display update...");
+            // Serial.println("Display update...");
 
             lastUpdateTimeMillis = millis();
             forceUpdate = false;
@@ -923,7 +954,7 @@ void updateDisplay(void *parameter)
             lastT2 = temperatureF2;
             lastT3 = temperatureF3;
 
-            // taskENTER_CRITICAL(&me->screenLock);
+            xSemaphoreTake(me->mutex, portMAX_DELAY);
 
             gfx->setTextColor(WHITE);
 
@@ -966,7 +997,7 @@ void updateDisplay(void *parameter)
             // gfx->print(getDecimalPart(temperatureF3));
             gfx->setTextSize(FONT_SIZE);
 
-            // taskEXIT_CRITICAL(&me->screenLock);
+            xSemaphoreGive(me->mutex);
         }
 
         vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS);

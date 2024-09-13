@@ -39,6 +39,32 @@ DisplayUpdater *displayUpdater;
 // bool btn1IsDown = false;
 // bool btn2IsDown = true;
 
+bool servoMoving = false;
+
+void pushServoButtonX(void *pvParameters)
+{
+  DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
+  displayUpdater->renderClickIcon(true);
+
+  servoMoving = true;
+  digitalWrite(LED_ONBOARD, HIGH);
+  // myServo.write(0);
+  delay(750);
+  // myServo.write(90);
+  digitalWrite(LED_ONBOARD, LOW);
+  servoMoving = false;
+  displayUpdater->renderClickIcon(false);
+  vTaskDelete(NULL);
+}
+
+void pushServoButton()
+{
+  if (!servoMoving)
+  {
+    xTaskCreate(pushServoButtonX, "pushServoButton", 2048, displayUpdater, 1, NULL);
+  }
+}
+
 void setup()
 {
 
@@ -50,92 +76,13 @@ void setup()
 
   helper.wiFiBegin("DarkNet", "7pu77ies77");
 
-  
   tempRecorder->begin();
 
-
-  // pinMode(button1Pin, INPUT_PULLUP);
-  // pinMode(button2Pin, INPUT_PULLUP);
-  // myServo.attach(servoPin);
-
-  // Serial.printf("helper.servoHomeAngle: %d\n", helper.servoHomeAngle);
-  // myServo.write(helper.servoHomeAngle);
+  touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
 }
 
 int lastPotValue = -1;
 
 void loop()
 {
-
-  // // Read the state of the button
-  // button1State = digitalRead(button1Pin);
-  // button2State = digitalRead(button2Pin);
-
-  // // Serial.printf("btn1 %d -- btn2 %d\n", button1State, button2State);
-  // if (button2State == HIGH)
-  // {
-  //   // Serial.println("btn2 low");
-  //   btn2IsDown = false;
-  // }
-  // else
-  // {
-
-  //   if (!btn2IsDown)
-  //   {
-  //     Serial.println("btn2 down!!!!!");
-  //     helper.chaos("wifi");
-  //     btn2IsDown = true;
-  //   }
-  // }
-
-  // //   if (button1State == HIGH)
-  // //   {
-  // //     // Serial.println("btn2 low");
-  // //     btn1IsDown = false;
-  // //   }
-  // //   else
-  // //   {
-
-  // //     if (!btn1IsDown)
-  // //     {
-  // //       Serial.println("btn1 down!!!!");
-  // //     }
-  // //     btn1IsDown = true;
-  // //   }
-
-  // if (button1State == LOW)
-  // {
-  //   if (!btn1IsDown)
-  //   {
-
-  //     helper.updateConfig();
-
-  //     Serial.print("angle:");
-  //     Serial.println(helper.servoAngle);
-  //     Serial.print("pressDownHoldTime:");
-  //     Serial.println(helper.pressDownHoldTime);
-
-  //     myServo.write(helper.servoAngle);
-  //     delay(helper.pressDownHoldTime);
-  //     myServo.write(helper.servoHomeAngle);
-
-  //     btn1IsDown = true;
-  //   }
-  // }
-  // else
-  // {
-  //   btn1IsDown = false;
-  //   // Serial.print("pot:");
-  //   // Serial.print(potValue);
-  //   // Serial.println();
-  //   // Serial.println("Button not pressed.");
-  // }
-
-  // auto endTime = micros();
-  // auto timeTaken = endTime - startTime;
-  // if (timeTaken > 16666)
-  // {
-  //   return;
-  // }
-  // delayMicroseconds(16666 - timeTaken); // Small delay to avoid bouncing issues
 }

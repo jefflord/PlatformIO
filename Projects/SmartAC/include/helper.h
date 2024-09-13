@@ -15,6 +15,7 @@
 #include <RTClib.h>
 #include <unordered_map>
 #include <time.h>
+#include <bmp.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -28,6 +29,9 @@
 #define OLED_RES 22
 #define OLED_SDA 23
 #define OLED_SCL 18
+
+#define TOUCH_PIN 33
+#define LED_ONBOARD 2
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
@@ -152,7 +156,6 @@ public:
 
     float temperatureC[3];
 
-
 private:
     bool xhasRtc = false;
 
@@ -180,6 +183,14 @@ public:
     Arduino_GFX *gfx;
 
     portMUX_TYPE screenLock = portMUX_INITIALIZER_UNLOCKED;
+
+    SemaphoreHandle_t mutex;
+
+    static void updateDisplay(void *parameter);
+    static void _renderClickIcon(void *parameter);
+    void renderClickIcon(bool showRenderClickIcon);
+
+    bool showRenderClickIcon = false;
 
 private:
 };
