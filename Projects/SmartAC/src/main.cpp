@@ -43,22 +43,19 @@ bool servoMoving = false;
 void pushServoButtonX(void *pvParameters)
 {
 
+  servoMoving = true;
   pinMode(LED_ONBOARD, OUTPUT);
   DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
-
   DisplayParameters params = {true, true, epd_bitmap_icons8_natural_user_interface_2_13, 0, 0, NULL};
   displayUpdater->showIcon(&params);
-
-  servoMoving = true;
   digitalWrite(LED_ONBOARD, HIGH);
   myServo.write(helper.servoAngle);
   vTaskDelay(pdMS_TO_TICKS(helper.pressDownHoldTime));
   myServo.write(helper.servoHomeAngle);
   digitalWrite(LED_ONBOARD, LOW);
-  servoMoving = false;
-
   params.show = false;
   displayUpdater->showIcon(&params);
+  servoMoving = false;
 
   vTaskDelete(NULL);
 }

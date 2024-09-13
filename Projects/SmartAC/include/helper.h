@@ -121,6 +121,8 @@ private:
     WiFiUDP ntpUDP;
     NTPClient *timeClient = NULL;
 
+    bool timeClientOk = false;
+
     void setTimeLastCheck(int64_t value);
     int64_t getTimeLastCheck();
 
@@ -128,6 +130,7 @@ private:
 
     std::unordered_map<std::string, int64_t> sourceIdCache;
 
+    int64_t lastNTPCheckTimeMs = 0;
     int64_t lastNTPTime = 0;             // Time from the last NTP update
     unsigned long lastNTPReadMillis = 0; // millis() at the time of the last NTP update
 

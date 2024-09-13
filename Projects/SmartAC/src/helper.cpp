@@ -587,15 +587,26 @@ int64_t MyIoTHelper::getTime()
         return 1726189566ll * 1000ll;
     }
 
-    lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+    if (timeClientOk)
+    {
+        lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+        lastNTPCheckTimeMs = millis();
+    }
+    else
+    {
+        // if we have one, but it' bad, guess the time.
+        Serial.println("Guessing time!");
+        lastNTPTime = millis() - lastNTPCheckTimeMs;
+    }
 
-    if (millis() - getTimeLastCheck() > 30000)
+    if (millis() - getTimeLastCheck() > 10 * 60 * 1000)
     {
 
         xTaskCreate(
             [](void *parameter)
             {
                 MyIoTHelper *me = static_cast<MyIoTHelper *>(parameter);
+                me->timeClientOk = false;
                 if (WiFi.status() != WL_CONNECTED)
                 {
                     me->wiFiBegin(me->wifi_ssid, me->wifi_password, NULL);
@@ -604,20 +615,25 @@ int64_t MyIoTHelper::getTime()
                 {
                     delete me->timeClient;
                     WiFiUDP ntpUDP;
-                    me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000); // Time offset in seconds and update interval
+                    me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
                     me->timeClient->begin();
                     auto updated = me->timeClient->update();
+
+                    if (updated)
+                    {
+                        me->timeClientOk = true;
+                    }
                     // Serial.printf("getTime updated %s\n", updated ? "true" : "false");
                 }
 
                 me->setTimeLastCheck(millis());
                 vTaskDelete(NULL);
-            },         // Function to run on the new thread
+            },              // Function to run on the new thread
             "getTimeChild", // Name of the task (for debugging)
-            2048 * 2,  // Stack size (in bytes) // 8192
-            this,      // Parameter passed to the task
-            1,         // Priority (0-24, higher number means higher priority)
-            NULL       // Handle to the task (not used here)
+            2048 * 2,       // Stack size (in bytes) // 8192
+            this,           // Parameter passed to the task
+            1,              // Priority (0-24, higher number means higher priority)
+            NULL            // Handle to the task (not used here)
         );
     }
 
@@ -705,9 +721,15 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
     }
 
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
-    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000);
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
     timeClient->begin();
-    timeClient->update();
+    auto updated = timeClient->update();
+
+    if (updated)
+    {
+        timeClientOk = true;
+    }
+
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
 
