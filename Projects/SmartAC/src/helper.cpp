@@ -1,4 +1,5 @@
 #include "helper.h"
+#include "DisplayUpdater.h"
 
 #ifndef PROJECT_SRC_DIR
 #define PROJECT_SRC_DIR "PROJECT_SRC_DIR"
@@ -11,8 +12,9 @@ void _resetWifi(void *p)
     {
         if (x_resetWifi)
         {
-            Serial.println("killing wifi");
+            Serial.println("killing wifi b");
             WiFi.disconnect(false);
+            Serial.println("wifi killed b");
             x_resetWifi = false;
         }
         vTaskDelay(pdMS_TO_TICKS(16));
@@ -30,13 +32,14 @@ MyIoTHelper::MyIoTHelper(const String &name)
     mutex = xSemaphoreCreateMutex();
     setTimeLastCheck(millis());
     configName = name;
+
     xTaskCreate(
-        _resetWifi,             // Function to run on the new thread
-        "internalUpdateConfig", // Name of the task (for debugging)
-        4096,                   // Stack size (in bytes)
-        NULL,                   // Parameter passed to the task
-        1,                      // Priority (0-24, higher number means higher priority)
-        NULL                    // Handle to the task (not used here)
+        _resetWifi,   // Function to run on the new thread
+        "_resetWifi", // Name of the task (for debugging)
+        2048 * 4,     // Stack size (in bytes)
+        NULL,         // Parameter passed to the task
+        1,            // Priority (0-24, higher number means higher priority)
+        NULL          // Handle to the task (not used here)
     );
 }
 
@@ -93,7 +96,7 @@ int64_t MyIoTHelper::getSourceId(String name)
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        wiFiBegin(wifi_ssid, wifi_password, NULL);
     }
 
     HTTPClient http;
@@ -252,7 +255,7 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        ioTHelper->wiFiBegin(ioTHelper->wifi_ssid, ioTHelper->wifi_password);
+        ioTHelper->wiFiBegin(ioTHelper->wifi_ssid, ioTHelper->wifi_password, NULL);
     }
 
     HTTPClient http;
@@ -379,6 +382,7 @@ void MyIoTHelper::updateConfig()
 
     if (!configHasBeenDownloaded || MyIoTHelper::hasTimePassed())
     {
+
         Serial.println("Updating config");
 
         TaskParams *params = new TaskParams;
@@ -392,7 +396,7 @@ void MyIoTHelper::updateConfig()
                 vTaskDelete(NULL);
             },                      // Function to run on the new thread
             "internalUpdateConfig", // Name of the task (for debugging)
-            4096,                   // Stack size (in bytes)
+            2048 * 4,               // Stack size (in bytes)
             params,                 // Parameter passed to the task
             1,                      // Priority (0-24, higher number means higher priority)
             NULL                    // Handle to the task (not used here)
@@ -409,9 +413,11 @@ void MyIoTHelper::chaos(const String &mode)
 
     if (mode.equals("wifi"))
     {
-        Serial.println("killing wifi");
-        WiFi.disconnect(false);
-        Serial.println("killing wifi done");
+
+        resetWifi();
+        // Serial.println("killing wifi");
+        // WiFi.disconnect(false);
+        // Serial.println("killing wifi done");
     }
 }
 
@@ -419,6 +425,7 @@ void MyIoTHelper::internalUpdateConfig()
 {
 
     Serial.println("internalUpdateConfig");
+
     lastConfigUpdateTime = std::chrono::steady_clock::now();
     configHasBeenDownloaded = true;
 
@@ -442,11 +449,12 @@ void MyIoTHelper::internalUpdateConfig()
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        wiFiBegin(wifi_ssid, wifi_password, NULL);
     }
 
     if (WiFi.status() == WL_CONNECTED)
     {
+
         HTTPClient http;
         http.begin(url);
 
@@ -579,23 +587,41 @@ int64_t MyIoTHelper::getTime()
         return 1726189566ll * 1000ll;
     }
 
-    if (millis() - getTimeLastCheck() > 60000)
+    lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+
+    if (millis() - getTimeLastCheck() > 30000)
     {
-        delete timeClient;
-        WiFiUDP ntpUDP;
-        timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000); // Time offset in seconds and update interval
-        timeClient->begin();
-        auto updated = timeClient->update();
-        // Serial.printf("update %s\n", updated ? "true" : "false");
-        setTimeLastCheck(millis());
+
+        xTaskCreate(
+            [](void *parameter)
+            {
+                MyIoTHelper *me = static_cast<MyIoTHelper *>(parameter);
+                if (WiFi.status() != WL_CONNECTED)
+                {
+                    me->wiFiBegin(me->wifi_ssid, me->wifi_password, NULL);
+                }
+                else
+                {
+                    delete me->timeClient;
+                    WiFiUDP ntpUDP;
+                    me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000); // Time offset in seconds and update interval
+                    me->timeClient->begin();
+                    auto updated = me->timeClient->update();
+                    // Serial.printf("getTime updated %s\n", updated ? "true" : "false");
+                }
+
+                me->setTimeLastCheck(millis());
+                vTaskDelete(NULL);
+            },         // Function to run on the new thread
+            "getTimeChild", // Name of the task (for debugging)
+            2048 * 2,  // Stack size (in bytes) // 8192
+            this,      // Parameter passed to the task
+            1,         // Priority (0-24, higher number means higher priority)
+            NULL       // Handle to the task (not used here)
+        );
     }
 
-    lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
-    return ((int64_t)timeClient->getEpochTime() * 1000);
-
-    // unsigned long currentMillis = millis();
-    // int64_t elapsedMillis = currentMillis - lastNTPReadMillis;
-    // return lastNTPTime + elapsedMillis;
+    return lastNTPTime;
 }
 
 String MyIoTHelper::getFormattedTime()
@@ -610,7 +636,10 @@ String MyIoTHelper::getFormattedTime()
 
     struct tm *timeinfo;
     char timeStringBuff[12];
+
+    // Serial.println("start getTime");
     auto lastNTPTime = getTime() / 1000;
+    // Serial.print("lastNTPTime:");
     // Serial.println(lastNTPTime);
     timeinfo = localtime((time_t *)&lastNTPTime);
     strftime(timeStringBuff, sizeof(timeStringBuff), "%I:%M %p", timeinfo);
@@ -633,9 +662,20 @@ void MyIoTHelper::setTimeLastCheck(int64_t value)
     xSemaphoreGive(mutex);
 }
 
-wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
+wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase, DisplayUpdater *_displayUpdater)
 {
     auto result = WiFi.begin(ssid, passphrase);
+
+    if (_displayUpdater != NULL)
+    {
+        displayUpdater = _displayUpdater;
+    }
+
+    DisplayParameters params2 = {true, true, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+    if (displayUpdater != NULL)
+    {
+        displayUpdater->showIcon(&params2);
+    }
 
     wifi_ssid = ssid;
     wifi_password = passphrase;
@@ -647,18 +687,30 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
         Serial.print(".");
     }
 
+    if (displayUpdater != NULL)
+    {
+        params2.show = true;
+        params2.flash = false;
+        displayUpdater->showIcon(&params2);
+    }
+
     Serial.print("\nConnected to Wi-Fi: ");
     Serial.println(WiFi.localIP());
 
     WiFiUDP ntpUDP;
+
+    if (timeClient != NULL)
+    {
+        delete timeClient;
+    }
+
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
-    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60000);
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60000);
     timeClient->begin();
     timeClient->update();
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
 
-    timeClient->update();
     lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
     lastNTPReadMillis = millis();
 
@@ -789,13 +841,6 @@ TempRecorder::TempRecorder(MyIoTHelper *_helper)
     ioTHelper = _helper;
 }
 
-DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder)
-{
-    mutex = xSemaphoreCreateMutex();
-    ioTHelper = _helper;
-    tempRecorder = _tempRecorder;
-}
-
 void TempRecorder::doTemp(void *parameter)
 {
 
@@ -827,7 +872,7 @@ void TempRecorder::doTemp(void *parameter)
             auto time = ioTHelper->getTime();
             auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
 
-            Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
+            // Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
 
             // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
         }
@@ -886,167 +931,6 @@ void doTempX(void *parameter)
 }
 
 // TaskParamsHolder params;
-
-void DisplayUpdater::renderClickIcon(bool _showRenderClickIcon)
-{
-
-    showRenderClickIcon = _showRenderClickIcon;
-    if (showRenderClickIcon)
-    {
-        xTaskCreate(DisplayUpdater::_renderClickIcon, "renderClickIcon", 2048, this, 1, NULL);
-    }
-}
-
-void DisplayUpdater::_renderClickIcon(void *parameter)
-{
-    DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
-    auto gfx = me->gfx;
-
-    while (me->showRenderClickIcon)
-    {
-        xSemaphoreTake(me->mutex, portMAX_DELAY);
-        gfx->fillRect(0, 0, 13, 13, BLACK);
-        gfx->drawXBitmap(0, 0, epd_bitmap_icons8_natural_user_interface_2_13, 13, 13, WHITE);
-        xSemaphoreGive(me->mutex);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        xSemaphoreTake(me->mutex, portMAX_DELAY);
-        gfx->fillRect(0, 0, 13, 13, BLACK);
-        xSemaphoreGive(me->mutex);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
-}
-
-void DisplayUpdater::updateDisplay(void *parameter)
-{
-    DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
-
-    /**/
-    auto animationShowing = false;
-    auto forceUpdate = false;
-    const int SET_CUR_TOP_Y = 16 - 16;
-    const int FONT_SIZE = 2;
-    /**/
-    auto gfx = me->gfx;
-
-    gfx->begin();
-
-    gfx->setTextSize(FONT_SIZE);
-    gfx->fillScreen(BLACK);
-
-    long loopDelayMs = 1000;
-    // long lastRun = 0;
-
-    double lastT1 = 0;
-    double lastT2 = 0;
-    double lastT3 = 0;
-
-    auto lastUpdateTimeMillis = millis();
-    for (;;)
-    {
-
-        auto startTime = millis();
-        if (animationShowing)
-        {
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-            forceUpdate = true;
-            continue;
-        }
-
-        // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
-        // sprintf(timeString, "%4.1f\u00B0C", temperature_1_C);
-
-        // temperature_0_C = round(temperature_0_C * 10) / 10.0;
-        // temperature_1_C = round(temperature_1_C * 10) / 10.0;
-        // temperature_2_C = round(temperature_2_C * 10) / 10.0;
-
-        auto temperature_0_C = me->tempRecorder->temperatureC[0];
-        auto temperature_1_C = me->tempRecorder->temperatureC[1];
-        auto temperature_2_C = me->tempRecorder->temperatureC[2];
-
-        temperature_0_C = round(temperature_0_C);
-        temperature_1_C = round(temperature_1_C);
-        temperature_2_C = round(temperature_2_C);
-
-        auto temperatureF1 = (temperature_0_C * (9.0 / 5.0)) + 32;
-        auto temperatureF2 = (temperature_1_C * (9.0 / 5.0)) + 32;
-        auto temperatureF3 = (temperature_2_C * (9.0 / 5.0)) + 32;
-
-        auto timeSinceLast = millis() - lastUpdateTimeMillis;
-        if (timeSinceLast > 10000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
-        {
-            // Serial.println("Display update...");
-
-            lastUpdateTimeMillis = millis();
-            forceUpdate = false;
-            lastT1 = temperatureF1;
-            lastT2 = temperatureF2;
-            lastT3 = temperatureF3;
-
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
-
-            gfx->setTextColor(WHITE);
-
-            gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
-            // char randomChar = (char)random(97, 127);
-            gfx->setCursor(0, SET_CUR_TOP_Y + 16);
-
-            // if (uploadingData)
-            // {
-            //   renderUploadIcon();
-            // }
-
-            gfx->println(me->ioTHelper->getFormattedTime());
-
-            gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
-
-            char bufferForNumber[20];
-
-            gfx->setTextColor(BLUE);
-            sprintf(bufferForNumber, "%2.0f", temperatureF1);
-            gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF1));
-            gfx->setTextSize(FONT_SIZE);
-
-            auto y = gfx->getCursorY();
-            gfx->setCursor(gfx->getCursorX() + 12, y);
-            gfx->setTextColor(RED);
-            sprintf(bufferForNumber, "%2.0f", temperatureF2);
-            gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF2));
-            gfx->setTextSize(FONT_SIZE);
-
-            gfx->setCursor(gfx->getCursorX() + 12, y);
-            gfx->setTextColor(GREEN);
-            sprintf(bufferForNumber, "%2.0f", temperatureF3);
-            gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF3));
-            gfx->setTextSize(FONT_SIZE);
-
-            xSemaphoreGive(me->mutex);
-        }
-
-        vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS);
-    }
-}
-
-void DisplayUpdater::begin()
-{
-    Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
-    gfx = new Arduino_SSD1331(bus, OLED_RES);
-
-    xTaskCreate(
-        updateDisplay,   // Function to run on the new thread
-        "updateDisplay", // Name of the task (for debugging)
-        8192 * 2,        // Stack size (in bytes) // 8192
-        this,            // Parameter passed to the task
-        1,               // Priority (0-24, higher number means higher priority)
-        NULL             // Handle to the task (not used here)
-    );
-}
 
 void TempRecorder::begin()
 {

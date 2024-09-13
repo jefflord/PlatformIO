@@ -1,3 +1,7 @@
+
+#ifndef MY_CLASS_H // Header guard
+#define MY_CLASS_H
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -52,12 +56,13 @@ using DataStorage = std::vector<SourceData>;
 void mySetup();
 void showStartReason();
 
-wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
+// wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
 
 void getConfig(const String &name);
 
-#ifndef MY_CLASS_H // Header guard
-#define MY_CLASS_H
+// Forward Declaration
+class DisplayUpdater;
+struct DisplayParameters;
 
 class MyIoTHelper
 {
@@ -93,7 +98,7 @@ public:
 
     Preferences preferences;
 
-    wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
+    wl_status_t wiFiBegin(const String &ssid, const String &passphrase, DisplayUpdater *_displayUpdater);
 
     String configName;
 
@@ -108,6 +113,8 @@ public:
 
     String wifi_ssid = "";
     String wifi_password = "";
+
+    DisplayUpdater *displayUpdater;
 
 private:
     bool hasRtc = false;
@@ -169,33 +176,6 @@ private:
     static void doTemp(void *p);
     unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
     unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
-};
-
-class DisplayUpdater
-{
-public:
-    DisplayUpdater(MyIoTHelper *helper, TempRecorder *tempRecorder);
-    //~TempHelper(); // Destructor
-
-    // OneWire *oneWire;
-    // DallasTemperature *sensors;
-    MyIoTHelper *ioTHelper;
-    TempRecorder *tempRecorder;
-    void begin();
-
-    Arduino_GFX *gfx;
-
-    portMUX_TYPE screenLock = portMUX_INITIALIZER_UNLOCKED;
-
-    SemaphoreHandle_t mutex;
-
-    static void updateDisplay(void *parameter);
-    static void _renderClickIcon(void *parameter);
-    void renderClickIcon(bool showRenderClickIcon);
-
-    bool showRenderClickIcon = false;
-
-private:
 };
 
 #endif

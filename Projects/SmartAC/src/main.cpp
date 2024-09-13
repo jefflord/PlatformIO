@@ -10,6 +10,7 @@ To Do:
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include "helper.h"
+#include "DisplayUpdater.h"
 
 /**************/
 
@@ -44,7 +45,9 @@ void pushServoButtonX(void *pvParameters)
 
   pinMode(LED_ONBOARD, OUTPUT);
   DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
-  displayUpdater->renderClickIcon(true);
+
+  DisplayParameters params = {true, true, epd_bitmap_icons8_natural_user_interface_2_13, 0, 0, NULL};
+  displayUpdater->showIcon(&params);
 
   servoMoving = true;
   digitalWrite(LED_ONBOARD, HIGH);
@@ -53,7 +56,10 @@ void pushServoButtonX(void *pvParameters)
   myServo.write(helper.servoHomeAngle);
   digitalWrite(LED_ONBOARD, LOW);
   servoMoving = false;
-  displayUpdater->renderClickIcon(false);
+
+  params.show = false;
+  displayUpdater->showIcon(&params);
+
   vTaskDelete(NULL);
 }
 
@@ -73,7 +79,9 @@ void pushServoButton()
 
     // we only want to do this one per, so we use okToGo
     if (okToGo)
-    {      
+    {
+      helper.chaos("wifi");
+      vTaskDelay(pdMS_TO_TICKS(2000));
       helper.updateConfig();
       okToGo = false;
     }
@@ -94,7 +102,13 @@ void setup()
   displayUpdater = new DisplayUpdater(&helper, tempRecorder);
   displayUpdater->begin();
 
-  helper.wiFiBegin("DarkNet", "7pu77ies77");
+  helper.wiFiBegin("DarkNet", "7pu77ies77", displayUpdater);
+
+  // DisplayParameters params = {true, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+  // if (displayUpdater != NULL)
+  // {
+  //   displayUpdater->showIcon(&params);
+  // }
 
   tempRecorder->begin();
 

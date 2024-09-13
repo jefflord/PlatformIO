@@ -1,3 +1,7 @@
+
+#ifndef MY_BMP_H // Header guard
+#define MY_BMP_H
+
 #include <Arduino.h>
 
 // void showClickAnimation(void *p);
@@ -11,10 +15,16 @@
 
 
 /*
-https://javl.github.io/image2cpp/
-    Code output format: Arduino code
-    Draw mode:          Horizontal - 1 bit per pixel
-    Swap bits in byte:  Yes
+Get from: 
+	https://icons8.com/icons
+
+Convert here:
+	https://javl.github.io/image2cpp/
+    	
+	Use:
+		Code output format: Arduino code
+    	Draw mode:          Horizontal - 1 bit per pixel
+    	Swap bits in byte:  Yes
 
     Use with Arduino_GFX_Library drawXBitmap
 */
@@ -48,3 +58,10 @@ const unsigned char epd_bitmap_icons8_natural_user_interface_2_13 [] PROGMEM = {
 	0xfc, 0x07, 0xfc, 0x07, 0xf8, 0x07, 0xe0, 0x07, 0x00, 0x00
 };
 
+// 'icons8-wifi-13', 13x13px
+const unsigned char epd_bitmap_icons8_wifi_13 [] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0xf0, 0x01, 0xfc, 0x07, 0x1e, 0x0f, 0xe6, 0x0c, 0xf8, 0x03, 0xb8, 0x03, 
+	0xe0, 0x00, 0xe0, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+#endif
