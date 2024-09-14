@@ -9,7 +9,7 @@ To Do:
 */
 #include <Arduino.h>
 #include <ESP32Servo.h>
-#include "helper.h"
+#include "MyIoTHelper.h"
 #include "DisplayUpdater.h"
 #include <ArduinoOTA.h>
 
@@ -48,9 +48,7 @@ ThreadSafeSerial safeSerial;
 
 void pushServoButtonX(void *pvParameters)
 {
-
-  int x = millis();
-  safeSerial.print(x);
+  
   servoMoving = true;
   pinMode(LED_ONBOARD, OUTPUT);
   DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
