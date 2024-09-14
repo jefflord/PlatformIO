@@ -1,9 +1,11 @@
 #ifndef MY_DisplayUpdater
 #define MY_DisplayUpdater
 
-#include "helper.h"
+#include "MyIoTHelper.h"
+#include "TempRecorder.h"
 
 struct DisplayParameters;
+
 
 class DisplayUpdater
 {

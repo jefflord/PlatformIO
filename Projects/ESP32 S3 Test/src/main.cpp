@@ -7,6 +7,10 @@
 #include <Preferences.h>
 #include "extra.h"
 
+#include "A.h"
+#include "B.h"
+#include "X.h"
+
 // #define configGENERATE_RUN_TIME_STATS 1
 // #define portGET_RUN_TIME_COUNTER_VALUE() (esp_task_get_run_time_stats())
 
@@ -364,13 +368,29 @@ int lastTouchValue = 0;
 
 void vDelay(unsigned long delayMs)
 {
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(delayMs));
 }
 
 int loopCounter = 0;
 
 void loop()
 {
+
+  B b;
+  A a;
+  X x;
+
+  a.setup(&b);
+  b.setup(&a);
+
+  x.setup(&a, &b);
+
+  Serial.println(1);
+  a.hello(true);
+  Serial.println(2);
+  b.hello(true);
+  Serial.println(3);
+  x.hello(true);
 
   if ((loopCounter++ % 10) == 0)
   {
@@ -395,7 +415,7 @@ void loop()
 
   Serial.println("...");
   ArduinoOTA.handle();
-  vDelay(2000);
+  vDelay(3000);
   return;
 }
 

@@ -2,15 +2,32 @@
 #define MY_TempRecorder
 
 #include <Arduino.h>
-#include <vector>
-#include "ThreadSafeSerial.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <iostream>
+#include <chrono>
+#include <chrono>
+#include <Preferences.h>
+#include <vector>
+#include <utility> // For std::pair
+#include <cstdint> // For uint64_t
+#include <SPI.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <RTClib.h>
+#include <unordered_map>
+#include <time.h>
+#include <bmp.h>
+#include "ThreadSafeSerial.h"
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include "freertos/FreeRTOS.h" 
+
+#include <Arduino_GFX_Library.h>
 
 #define ONE_WIRE_BUS 19
+
 // Forward Declaration
 class MyIoTHelper;
 
@@ -61,131 +78,4 @@ private:
     unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
 };
 
-TempRecorder::TempRecorder(MyIoTHelper *_helper)
-{
-    ioTHelper = _helper;
-}
-
-void TempRecorder::doTemp(void *parameter)
-{
-
-    TempRecorder *me = static_cast<TempRecorder *>(parameter);
-    OneWire oneWire(ONE_WIRE_BUS);
-    DallasTemperature sensors(&oneWire);
-    sensors.begin();
-
-    auto ioTHelper = me->ioTHelper;
-
-    long flushCount = 0;
-    while (true)
-    {
-        auto currentMillis = millis();
-        sensors.requestTemperatures();
-
-        for (int i = 0; i < sensors.getDeviceCount(); i++)
-        {
-            DeviceAddress deviceAddress;
-            sensors.getAddress(deviceAddress, i);
-            auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
-
-            // safeSerial.print("Sensor ");
-            // safeSerial.printf("%d, %s", i, sensorId.c_str());
-            // safeSerial.print(": ");
-            // safeSerial.println(sensors.getTempC(deviceAddress));
-
-            me->temperatureC[i] = sensors.getTempC(deviceAddress);
-            auto time = ioTHelper->getTime();
-            auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
-
-            // safeSerial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
-
-            // safeSerial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
-        }
-
-        // if (false)
-        // {
-        //   safeSerial.print(temperatureC);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(temperatureF);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(time);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(itemCount);
-        //   safeSerial.println();
-        // }
-
-        if (currentMillis - me->previousTempFlushMillis >= (ioTHelper->tempFlushIntevalSec * 1000))
-        {
-
-            flushCount++;
-            me->previousTempFlushMillis = currentMillis;
-            // safeSerial.println(flushCount);
-            // safeSerial.print("FLUSH TIME");
-            // safeSerial.println(++flushCount);
-            //  safeSerial.printf("FLUSH TIME %ld\n", ++flushCount);
-            safeSerial.printf("FLUSH TIME %ld\n", flushCount);
-            // safeSerial.println(flushCount);
-
-            for (int i = 0; i < sensors.getDeviceCount(); i++)
-            {
-                DeviceAddress deviceAddress;
-                sensors.getAddress(deviceAddress, i);
-                auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
-                auto itemCount = me->getRecordCount(sensorId);
-                safeSerial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
-            }
-
-            me->flushAllDatatoDB();
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(ioTHelper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
-    }
-}
-
-void doTempX(void *parameter)
-{
-
-    // TempHelper *me = static_cast<TempHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
-    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
-
-    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(parameter);
-
-    TempRecorder *th = static_cast<TempRecorder *>(parameter);
-    MyIoTHelper *ioTHelper = th->ioTHelper;
-
-    while (true)
-    {
-        safeSerial.print("helper->getTime(): ");
-        safeSerial.println(ioTHelper->_timeLastCheck);
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
-    }
-}
-
-// TaskParamsHolder params;
-
-void TempRecorder::begin()
-{
-
-    // // params.sharedObj = ioTHelper;
-    // params.sharedObj = new MyIoTHelper("SmartAC");
-
-    // MyIoTHelper *p_ioTHelper = static_cast<MyIoTHelper *>(params.sharedObj);
-
-    // safeSerial.print("1 ############################: ");
-    // safeSerial.println(p_ioTHelper->_timeLastCheck);
-    // delay(1000);
-
-    // safeSerial.print("2 ############################: ");
-    // safeSerial.println(ioTHelper->_timeLastCheck);
-    // delay(1000);
-
-    xTaskCreate(
-        doTemp,   // Function to run on the new thread
-        "doTemp", // Name of the task (for debugging)
-        8192 * 2, // Stack size (in bytes) // 8192
-        this,     // Parameter passed to the task
-        1,        // Priority (0-24, higher number means higher priority)
-        NULL      // Handle to the task (not used here)
-    );
-}
-#endif MY_TempRecorder
+#endif

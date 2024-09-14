@@ -27,8 +27,6 @@
 
 #include <Arduino_GFX_Library.h>
 
-
-
 #define ONE_WIRE_BUS 19
 
 #define OLED_CS 5
@@ -43,18 +41,18 @@
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
-// Define a pair structure to hold data points
-using DataPoint = std::pair<uint64_t, float>;
+// // Define a pair structure to hold data points
+// using DataPoint = std::pair<uint64_t, float>;
 
-// Define a structure to hold each source's data
-struct SourceData
-{
-    int64_t sourceId;
-    std::vector<DataPoint> data;
-};
+// // Define a structure to hold each source's data
+// struct SourceData
+// {
+//     int64_t sourceId;
+//     std::vector<DataPoint> data;
+// };
 
-// Define a vector to hold multiple sources
-using DataStorage = std::vector<SourceData>;
+// // Define a vector to hold multiple sources
+// using DataStorage = std::vector<SourceData>;
 
 void mySetup();
 void showStartReason();
@@ -119,7 +117,10 @@ public:
 
     DisplayUpdater *displayUpdater;
 
+    bool x_resetWifi = false;
+
 private:
+    int timeGuesses = 0;
     bool hasRtc = false;
     WiFiUDP ntpUDP;
     NTPClient *timeClient = NULL;
@@ -151,37 +152,37 @@ struct TaskParams
     String message;
 };
 
-class TempRecorder
-{
-public:
-    TempRecorder(MyIoTHelper *helper);
-    //~TempHelper(); // Destructor
+// class TempRecorder
+// {
+// public:
+//     TempRecorder(MyIoTHelper *helper);
+//     //~TempHelper(); // Destructor
 
-    // OneWire *oneWire;
-    // DallasTemperature *sensors;
-    MyIoTHelper *ioTHelper;
-    void begin();
+//     // OneWire *oneWire;
+//     // DallasTemperature *sensors;
+//     MyIoTHelper *ioTHelper;
+//     void begin();
 
-    void clearSource(String name);
-    void clearSource(long long sourceId);
-    void clearSource();
+//     void clearSource(String name);
+//     void clearSource(long long sourceId);
+//     void clearSource();
 
-    void flushAllDatatoDB();
-    int64_t flushDatatoDB(long long sourceId);
-    String getStorageAsJson(long long sourceId);
+//     void flushAllDatatoDB();
+//     int64_t flushDatatoDB(long long sourceId);
+//     String getStorageAsJson(long long sourceId);
 
-    float temperatureC[3];
+//     float temperatureC[3];
 
-private:
-    bool xhasRtc = false;
+// private:
+//     bool xhasRtc = false;
 
-    DataStorage storage;
+//     DataStorage storage;
 
-    size_t recordTemp(String name, int64_t time, float temperatureC);
-    size_t getRecordCount(String name);
-    static void doTemp(void *p);
-    unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
-    unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
-};
+//     size_t recordTemp(String name, int64_t time, float temperatureC);
+//     size_t getRecordCount(String name);
+//     static void doTemp(void *p);
+//     unsigned long previousTempMillis = 0;      // Store the last time doTemp() was executed
+//     unsigned long previousTempFlushMillis = 0; // Store the last time flusht to Db
+// };
 
 #endif
