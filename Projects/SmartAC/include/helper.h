@@ -20,11 +20,14 @@
 #include <unordered_map>
 #include <time.h>
 #include <bmp.h>
+#include "ThreadSafeSerial.h"
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
 #include <Arduino_GFX_Library.h>
+
+
 
 #define ONE_WIRE_BUS 19
 

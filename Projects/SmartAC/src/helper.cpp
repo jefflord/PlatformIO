@@ -12,9 +12,9 @@ void _resetWifi(void *p)
     {
         if (x_resetWifi)
         {
-            Serial.println("killing wifi b");
+            safeSerial.println("killing wifi b");
             WiFi.disconnect(false);
-            Serial.println("wifi killed b");
+            safeSerial.println("wifi killed b");
             x_resetWifi = false;
         }
         vTaskDelay(pdMS_TO_TICKS(16));
@@ -54,7 +54,7 @@ bool MyIoTHelper::hasTimePassed()
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> elapsed = now - lastConfigUpdateTime;
     std::chrono::duration<double, std::milli> delay_duration(configUpdateSec * 1000); // Convert delay to duration
-    // Serial.printf("elapsed %f, delay_duration %f, configUpdateSec %d \n", elapsed, delay_duration, configUpdateSec);
+    // safeSerial.printf("elapsed %f, delay_duration %f, configUpdateSec %d \n", elapsed, delay_duration, configUpdateSec);
     return elapsed >= delay_duration;
 }
 
@@ -66,12 +66,12 @@ int64_t MyIoTHelper::getSourceId(String name)
     auto it = sourceIdCache.find(key);
     if (it != sourceIdCache.end())
     {
-        // Serial.println("getSourceId cached!");
+        // safeSerial.println("getSourceId cached!");
         return it->second; // Return cached result
     }
     else
     {
-        // Serial.println("getSourceId NOT cached!");
+        // safeSerial.println("getSourceId NOT cached!");
     }
 
     lastConfigUpdateTime = std::chrono::steady_clock::now();
@@ -91,8 +91,8 @@ int64_t MyIoTHelper::getSourceId(String name)
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    // Serial.println("internalUpdateConfig");
-    // Serial.println(jsonPayload);
+    // safeSerial.println("internalUpdateConfig");
+    // safeSerial.println(jsonPayload);
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -112,17 +112,17 @@ int64_t MyIoTHelper::getSourceId(String name)
     }
     else
     {
-        Serial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+        safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
         http.end();
         return (int64_t)-2;
     }
 
-    // Serial.println(response);
+    // safeSerial.println(response);
 
     DeserializationError error = deserializeJson(doc, response);
     if (error)
     {
-        Serial.printf("Failed to parse JSON: %s\n", error.c_str());
+        safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
         return (int64_t)-1;
     }
     else
@@ -130,12 +130,12 @@ int64_t MyIoTHelper::getSourceId(String name)
 
         String val = doc["headers"]["Doc-Id"];
 
-        // Serial.println("getting header doc id!!!!!!");
-        // Serial.println(val);
+        // safeSerial.println("getting header doc id!!!!!!");
+        // safeSerial.println(val);
 
         char *end;
         int64_t number = strtoll(val.c_str(), &end, 10); // Base 10
-        // Serial.println(number);
+        // safeSerial.println(number);
 
         sourceIdCache[key] = number;
         return sourceIdCache[key];
@@ -218,7 +218,7 @@ void TempRecorder::flushAllDatatoDB()
     {
         flushDatatoDB(source.sourceId);
 
-        // Serial.println("RETURN!!!!");
+        // safeSerial.println("RETURN!!!!");
         // break;
     }
 }
@@ -240,15 +240,15 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    // Serial.println(jsonPayload);
+    // safeSerial.println(jsonPayload);
 
-    // Serial.printf("flushDatatoDB! %d\n", sourceId);
-    // Serial.print("jsonPayload:");
-    // Serial.println(jsonPayload);
+    // safeSerial.printf("flushDatatoDB! %d\n", sourceId);
+    // safeSerial.print("jsonPayload:");
+    // safeSerial.println(jsonPayload);
 
     if (!ioTHelper->sendToDb)
     {
-        Serial.println("Skipping sendToDb");
+        safeSerial.println("Skipping sendToDb");
         clearSource();
         return (int64_t)-99;
     }
@@ -271,18 +271,18 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
     }
     else
     {
-        Serial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+        safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
         http.end();
         return (int64_t)-2;
     }
 
-    // Serial.println("response!!!!");
-    // Serial.println(response);
+    // safeSerial.println("response!!!!");
+    // safeSerial.println(response);
 
     DeserializationError error = deserializeJson(doc, response);
     if (error)
     {
-        Serial.printf("Failed to parse JSON: %s\n", error.c_str());
+        safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
         return (int64_t)-1;
     }
     else
@@ -291,8 +291,8 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
         String val = doc["headers"]["Doc-Id"];
         String config = doc["headers"]["Config"];
 
-        // Serial.println("getting header doc id!!!!!!");
-        // Serial.println(val);
+        // safeSerial.println("getting header doc id!!!!!!");
+        // safeSerial.println(val);
 
         char *end;
         auto id = strtoll(val.c_str(), &end, 10); // Base 10
@@ -300,8 +300,8 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
 
         ioTHelper->parseConfig(config);
 
-        // Serial.print("addTemps: ");
-        // Serial.println(id);
+        // safeSerial.print("addTemps: ");
+        // safeSerial.println(id);
         return id;
     }
 }
@@ -311,8 +311,8 @@ size_t TempRecorder::getRecordCount(String name)
 
     auto sourceId = ioTHelper->getSourceId(name);
 
-    // Serial.print("sourceId:");
-    // Serial.println(sourceId);
+    // safeSerial.print("sourceId:");
+    // safeSerial.println(sourceId);
 
     for (auto &source : storage)
     {
@@ -330,8 +330,8 @@ size_t TempRecorder::recordTemp(String name, int64_t time, float temperatureC)
 
     auto sourceId = ioTHelper->getSourceId(name);
 
-    // Serial.print("sourceId:");
-    // Serial.println(sourceId);
+    // safeSerial.print("sourceId:");
+    // safeSerial.println(sourceId);
 
     for (auto &source : storage)
     {
@@ -342,19 +342,19 @@ size_t TempRecorder::recordTemp(String name, int64_t time, float temperatureC)
         }
     }
 
-    // Serial.println("Adding new newSource for this");
+    // safeSerial.println("Adding new newSource for this");
     SourceData newSource;
-    // Serial.println("F");
+    // safeSerial.println("F");
     newSource.sourceId = sourceId;
-    // Serial.println("G");
+    // safeSerial.println("G");
     newSource.data.push_back(DataPoint(time, temperatureC));
-    // Serial.println("H");
+    // safeSerial.println("H");
     storage.push_back(newSource);
-    // Serial.println("I");
+    // safeSerial.println("I");
     auto size = newSource.data.size();
-    // Serial.println("J");
-    // Serial.print(size);
-    // Serial.println("K");
+    // safeSerial.println("J");
+    // safeSerial.print(size);
+    // safeSerial.println("K");
 
     return size;
 }
@@ -362,7 +362,7 @@ size_t TempRecorder::recordTemp(String name, int64_t time, float temperatureC)
 void MyIoTHelper::updateConfig()
 {
 
-    Serial.println("updateConfig");
+    safeSerial.println("updateConfig");
 
     if (!configHasBeenDownloaded)
     {
@@ -371,19 +371,19 @@ void MyIoTHelper::updateConfig()
         preferences.end();
         if (body != "")
         {
-            // Serial.println("using saved config");
+            // safeSerial.println("using saved config");
             parseConfig(body);
         }
         else
         {
-            // Serial.println("No saved config");
+            // safeSerial.println("No saved config");
         }
     }
 
     if (!configHasBeenDownloaded || MyIoTHelper::hasTimePassed())
     {
 
-        Serial.println("Updating config");
+        safeSerial.println("Updating config");
 
         TaskParams *params = new TaskParams;
         params->obj = this;
@@ -404,7 +404,7 @@ void MyIoTHelper::updateConfig()
     }
     else
     {
-        Serial.println("NOT updating config");
+        safeSerial.println("NOT updating config");
     }
 }
 
@@ -415,16 +415,16 @@ void MyIoTHelper::chaos(const String &mode)
     {
 
         resetWifi();
-        // Serial.println("killing wifi");
+        // safeSerial.println("killing wifi");
         // WiFi.disconnect(false);
-        // Serial.println("killing wifi done");
+        // safeSerial.println("killing wifi done");
     }
 }
 
 void MyIoTHelper::internalUpdateConfig()
 {
 
-    Serial.println("internalUpdateConfig");
+    safeSerial.println("internalUpdateConfig");
 
     lastConfigUpdateTime = std::chrono::steady_clock::now();
     configHasBeenDownloaded = true;
@@ -442,8 +442,8 @@ void MyIoTHelper::internalUpdateConfig()
     serializeJson(doc, jsonPayload);
 
     // Print the JSON payload to the Serial Monitor
-    // Serial.println("getConfig Payload:");
-    // Serial.println(jsonPayload);
+    // safeSerial.println("getConfig Payload:");
+    // safeSerial.println(jsonPayload);
 
     String payload = "";
 
@@ -468,7 +468,7 @@ void MyIoTHelper::internalUpdateConfig()
         }
         else
         {
-            Serial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+            safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
             http.end();
             return;
         }
@@ -478,15 +478,15 @@ void MyIoTHelper::internalUpdateConfig()
         DeserializationError error = deserializeJson(doc, response);
         if (error)
         {
-            Serial.printf("Failed to parse JSON: %s\n", error.c_str());
+            safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
         }
         else
         {
 
             String body = doc["body"];
 
-            // Serial.print("body:");
-            // Serial.println(body);
+            // safeSerial.print("body:");
+            // safeSerial.println(body);
 
             parseConfig(body);
             preferences.begin("MyIoTHelper", false);
@@ -501,7 +501,7 @@ void MyIoTHelper::internalUpdateConfig()
     }
     else
     {
-        Serial.println("Wi-Fi not connected");
+        safeSerial.println("Wi-Fi not connected");
     }
 }
 
@@ -513,7 +513,7 @@ void MyIoTHelper::parseConfig(const String &config)
 
     if (error)
     {
-        Serial.printf("Failed to parse Body JSON: %s\n", error.c_str());
+        safeSerial.printf("Failed to parse Body JSON: %s\n", error.c_str());
     }
     else
     {
@@ -528,16 +528,16 @@ void MyIoTHelper::parseConfig(const String &config)
 
         if (false)
         {
-            Serial.println("######## parseConfig ########");
-            Serial.printf("\t pressDownHoldTime: %d\n", pressDownHoldTime);
-            Serial.printf("\t tempReadIntevalSec: %d\n", tempReadIntevalSec);
-            Serial.printf("\t sendToDb: %s\n", sendToDb ? "true" : "false");
-            Serial.printf("\t testJsonBeforeSend: %s\n", pressDownHoldTime ? "true" : "false");
-            Serial.printf("\t tempFlushIntevalSec: %d\n", tempFlushIntevalSec);
-            Serial.printf("\t configUpdateSec: %d\n", configUpdateSec);
-            Serial.printf("\t servoAngle: %d\n", servoAngle);
-            Serial.printf("\t servoHomeAngle: %d\n", servoHomeAngle);
-            Serial.println("######## parseConfig ########");
+            safeSerial.println("######## parseConfig ########");
+            safeSerial.printf("\t pressDownHoldTime: %d\n", pressDownHoldTime);
+            safeSerial.printf("\t tempReadIntevalSec: %d\n", tempReadIntevalSec);
+            safeSerial.printf("\t sendToDb: %s\n", sendToDb ? "true" : "false");
+            safeSerial.printf("\t testJsonBeforeSend: %s\n", pressDownHoldTime ? "true" : "false");
+            safeSerial.printf("\t tempFlushIntevalSec: %d\n", tempFlushIntevalSec);
+            safeSerial.printf("\t configUpdateSec: %d\n", configUpdateSec);
+            safeSerial.printf("\t servoAngle: %d\n", servoAngle);
+            safeSerial.printf("\t servoHomeAngle: %d\n", servoHomeAngle);
+            safeSerial.println("######## parseConfig ########");
         }
     }
 }
@@ -548,10 +548,10 @@ void loop() {
     chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
 
-  Serial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
-  Serial.printf("This chip has %d cores\n", ESP.getChipCores());
-  Serial.print("Chip ID: ");
-  Serial.println(chipId);
+  safeSerial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
+  safeSerial.printf("This chip has %d cores\n", ESP.getChipCores());
+  safeSerial.print("Chip ID: ");
+  safeSerial.println(chipId);
 
   delay(3000);
 }
@@ -566,67 +566,93 @@ void MyIoTHelper::Setup()
         continue;
 
     showStartReason();
-    Serial.print("File: ");
-    Serial.print(PROJECT_SRC_DIR);
-    Serial.print(" (");
-    Serial.print(__FILE__);
-    Serial.println(")");
-    Serial.print("Compiled on: ");
-    Serial.print(__DATE__);
-    Serial.print(" at ");
-    Serial.println(__TIME__);
-    Serial.print("MAC:");
-    Serial.println(WiFi.macAddress());
+    safeSerial.print("File: ");
+    safeSerial.print(PROJECT_SRC_DIR);
+    safeSerial.print(" (");
+    safeSerial.print(__FILE__);
+    safeSerial.println(")");
+    safeSerial.print("Compiled on: ");
+    safeSerial.print(__DATE__);
+    safeSerial.print(" at ");
+    safeSerial.println(__TIME__);
+    safeSerial.print("MAC:");
+    safeSerial.println(WiFi.macAddress());
 }
+
+// auto getTimeCount = 0;
 
 int64_t MyIoTHelper::getTime()
 {
+
+    // safeSerial.printf("getTimeCount: %d\n.", getTimeCount);
+
     if (timeClient == NULL)
     {
-        Serial.println("getTime: timeClient not set yet.");
+        safeSerial.println("getTime: timeClient not set yet.");
         return 1726189566ll * 1000ll;
     }
 
+    // if (getTimeCount > 5)
+    // {
+    //     timeClientOk = false;
+    // }
+
     if (timeClientOk)
     {
+        // getTimeCount++;
+
+        // safeSerial.printf("Guessing time, last was %lld\n", lastNTPTime);
+        // safeSerial.printf("Guessing time, is %lld\n", (lastNTPTime + (millis() - lastNTPCheckTimeMs)));
+
         lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
         lastNTPCheckTimeMs = millis();
     }
     else
     {
         // if we have one, but it' bad, guess the time.
-        Serial.println("Guessing time!");
-        lastNTPTime = millis() - lastNTPCheckTimeMs;
+        safeSerial.printf("Guessing time, last was %lld\n", lastNTPTime);
+        lastNTPTime = lastNTPTime + (millis() - lastNTPCheckTimeMs);
+        lastNTPCheckTimeMs = millis();
+        safeSerial.printf("Guessing time, is %lld\n", lastNTPTime);
     }
 
-    if (millis() - getTimeLastCheck() > 10 * 60 * 1000)
+    if (millis() - getTimeLastCheck() > 5 * 60 * 1000)
     {
 
         xTaskCreate(
             [](void *parameter)
             {
                 MyIoTHelper *me = static_cast<MyIoTHelper *>(parameter);
-                me->timeClientOk = false;
-                if (WiFi.status() != WL_CONNECTED)
-                {
-                    me->wiFiBegin(me->wifi_ssid, me->wifi_password, NULL);
-                }
-                else
-                {
-                    delete me->timeClient;
-                    WiFiUDP ntpUDP;
-                    me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
-                    me->timeClient->begin();
-                    auto updated = me->timeClient->update();
 
-                    if (updated)
+                try
+                {
+                    me->timeClientOk = false;
+                    if (WiFi.status() != WL_CONNECTED)
                     {
-                        me->timeClientOk = true;
+                        me->wiFiBegin(me->wifi_ssid, me->wifi_password, NULL);
                     }
-                    // Serial.printf("getTime updated %s\n", updated ? "true" : "false");
+                    else
+                    {
+                        delete me->timeClient;
+                        WiFiUDP ntpUDP;
+                        me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
+                        me->timeClient->begin();
+                        auto updated = me->timeClient->update();
+
+                        if (updated)
+                        {
+                            me->timeClientOk = true;
+                        }
+                        // safeSerial.printf("getTime updated %s\n", updated ? "true" : "false");
+                    }
+                    me->setTimeLastCheck(millis());
+                }
+                catch (const std::exception &e)
+                {
+                    safeSerial.println("e.what()!!!");
+                    safeSerial.println(e.what());
                 }
 
-                me->setTimeLastCheck(millis());
                 vTaskDelete(NULL);
             },              // Function to run on the new thread
             "getTimeChild", // Name of the task (for debugging)
@@ -645,7 +671,7 @@ String MyIoTHelper::getFormattedTime()
 
     // if (timeClient == NULL)
     // {
-    //     Serial.println("getFormattedTime: timeClient not set yet.");
+    //     safeSerial.println("getFormattedTime: timeClient not set yet.");
     //     return "12:12:12";
     //     // return 1726187296l * 1000l; // + (millis() / 1000);
     // }
@@ -653,10 +679,10 @@ String MyIoTHelper::getFormattedTime()
     struct tm *timeinfo;
     char timeStringBuff[12];
 
-    // Serial.println("start getTime");
+    // safeSerial.println("start getTime");
     auto lastNTPTime = getTime() / 1000;
-    // Serial.print("lastNTPTime:");
-    // Serial.println(lastNTPTime);
+    // safeSerial.print("lastNTPTime:");
+    // safeSerial.println(lastNTPTime);
     timeinfo = localtime((time_t *)&lastNTPTime);
     strftime(timeStringBuff, sizeof(timeStringBuff), "%I:%M %p", timeinfo);
 
@@ -700,7 +726,7 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(1000);
-        Serial.print(".");
+        safeSerial.print(".");
     }
 
     if (displayUpdater != NULL)
@@ -710,8 +736,8 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
         displayUpdater->showIcon(&params2);
     }
 
-    Serial.print("\nConnected to Wi-Fi: ");
-    Serial.println(WiFi.localIP());
+    safeSerial.print("\nConnected to Wi-Fi: ");
+    safeSerial.println(WiFi.localIP());
 
     WiFiUDP ntpUDP;
 
@@ -723,15 +749,23 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
     timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
     timeClient->begin();
-    auto updated = timeClient->update();
 
-    if (updated)
+    try
     {
-        timeClientOk = true;
+        auto updated = timeClient->update();
+
+        if (updated)
+        {
+            timeClientOk = true;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        safeSerial.println(e.what());
     }
 
-    Serial.print("Current time: ");
-    Serial.println(timeClient->getFormattedTime());
+    safeSerial.print("Current time: ");
+    safeSerial.println(timeClient->getFormattedTime());
 
     lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
     lastNTPReadMillis = millis();
@@ -758,8 +792,8 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
 //     serializeJson(doc, jsonPayload);
 
 //     // Print the JSON payload to the Serial Monitor
-//     Serial.println("getConfig Payload:");
-//     Serial.println(jsonPayload);
+//     safeSerial.println("getConfig Payload:");
+//     safeSerial.println(jsonPayload);
 
 //     String payload = "";
 //     if (WiFi.status() == WL_CONNECTED)
@@ -772,8 +806,8 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
 //         if (httpCode == HTTP_CODE_OK)
 //         {
 //             String response = http.getString();
-//             Serial.println("Response:");
-//             Serial.println(response);
+//             safeSerial.println("Response:");
+//             safeSerial.println(response);
 
 //             JsonDocument doc;
 //             DeserializationError error = deserializeJson(doc, response);
@@ -781,13 +815,13 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
 //         }
 //         else
 //         {
-//             Serial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+//             safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
 //         }
 //         http.end();
 //     }
 //     else
 //     {
-//         Serial.println("Wi-Fi not connected");
+//         safeSerial.println("Wi-Fi not connected");
 //     }
 // }
 
@@ -811,47 +845,47 @@ void showStartReason()
 {
     esp_reset_reason_t reason = esp_reset_reason();
 
-    Serial.print("Reset reason: ");
+    safeSerial.print("Reset reason: ");
     long delayMs = 0;
 
     switch (reason)
     {
     case ESP_RST_POWERON:
-        Serial.println("Power on reset");
+        safeSerial.println("Power on reset");
         break;
     case ESP_RST_EXT:
-        Serial.println("External reset");
+        safeSerial.println("External reset");
         break;
     case ESP_RST_SW:
-        Serial.println("Software reset");
+        safeSerial.println("Software reset");
         break;
     case ESP_RST_PANIC:
-        Serial.println("Exception/panic reset");
+        safeSerial.println("Exception/panic reset");
         delayMs = 1000;
         break;
     case ESP_RST_INT_WDT:
-        Serial.println("Interrupt watchdog reset");
+        safeSerial.println("Interrupt watchdog reset");
         delayMs = 1000;
         break;
     case ESP_RST_TASK_WDT:
-        Serial.println("Task watchdog reset");
+        safeSerial.println("Task watchdog reset");
         delayMs = 1000;
         break;
     case ESP_RST_WDT:
-        Serial.println("Other watchdog reset");
+        safeSerial.println("Other watchdog reset");
         delayMs = 1000;
         break;
     case ESP_RST_DEEPSLEEP:
-        Serial.println("Deep sleep reset");
+        safeSerial.println("Deep sleep reset");
         break;
     case ESP_RST_BROWNOUT:
-        Serial.println("Brownout reset");
+        safeSerial.println("Brownout reset");
         break;
     case ESP_RST_SDIO:
-        Serial.println("SDIO reset");
+        safeSerial.println("SDIO reset");
         break;
     default:
-        Serial.println("Unknown reset reason");
+        safeSerial.println("Unknown reset reason");
         break;
     }
 
@@ -885,37 +919,43 @@ void TempRecorder::doTemp(void *parameter)
             sensors.getAddress(deviceAddress, i);
             auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
 
-            // Serial.print("Sensor ");
-            // Serial.printf("%d, %s", i, sensorId.c_str());
-            // Serial.print(": ");
-            // Serial.println(sensors.getTempC(deviceAddress));
+            // safeSerial.print("Sensor ");
+            // safeSerial.printf("%d, %s", i, sensorId.c_str());
+            // safeSerial.print(": ");
+            // safeSerial.println(sensors.getTempC(deviceAddress));
 
             me->temperatureC[i] = sensors.getTempC(deviceAddress);
             auto time = ioTHelper->getTime();
             auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
 
-            // Serial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
+            // safeSerial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
 
-            // Serial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
+            // safeSerial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
         }
 
         // if (false)
         // {
-        //   Serial.print(temperatureC);
-        //   Serial.print(" -- ");
-        //   Serial.print(temperatureF);
-        //   Serial.print(" -- ");
-        //   Serial.print(time);
-        //   Serial.print(" -- ");
-        //   Serial.print(itemCount);
-        //   Serial.println();
+        //   safeSerial.print(temperatureC);
+        //   safeSerial.print(" -- ");
+        //   safeSerial.print(temperatureF);
+        //   safeSerial.print(" -- ");
+        //   safeSerial.print(time);
+        //   safeSerial.print(" -- ");
+        //   safeSerial.print(itemCount);
+        //   safeSerial.println();
         // }
 
         if (currentMillis - me->previousTempFlushMillis >= (ioTHelper->tempFlushIntevalSec * 1000))
         {
 
+            flushCount++;
             me->previousTempFlushMillis = currentMillis;
-            Serial.printf("FLUSH TIME %ld\n", ++flushCount);
+            // safeSerial.println(flushCount);
+            // safeSerial.print("FLUSH TIME");
+            // safeSerial.println(++flushCount);
+            //  safeSerial.printf("FLUSH TIME %ld\n", ++flushCount);
+            safeSerial.printf("FLUSH TIME %ld\n", flushCount);
+            // safeSerial.println(flushCount);
 
             for (int i = 0; i < sensors.getDeviceCount(); i++)
             {
@@ -923,7 +963,7 @@ void TempRecorder::doTemp(void *parameter)
                 sensors.getAddress(deviceAddress, i);
                 auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
                 auto itemCount = me->getRecordCount(sensorId);
-                Serial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
+                safeSerial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
             }
 
             me->flushAllDatatoDB();
@@ -946,8 +986,8 @@ void doTempX(void *parameter)
 
     while (true)
     {
-        Serial.print("helper->getTime(): ");
-        Serial.println(ioTHelper->_timeLastCheck);
+        safeSerial.print("helper->getTime(): ");
+        safeSerial.println(ioTHelper->_timeLastCheck);
         vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
     }
 }
@@ -962,12 +1002,12 @@ void TempRecorder::begin()
 
     // MyIoTHelper *p_ioTHelper = static_cast<MyIoTHelper *>(params.sharedObj);
 
-    // Serial.print("1 ############################: ");
-    // Serial.println(p_ioTHelper->_timeLastCheck);
+    // safeSerial.print("1 ############################: ");
+    // safeSerial.println(p_ioTHelper->_timeLastCheck);
     // delay(1000);
 
-    // Serial.print("2 ############################: ");
-    // Serial.println(ioTHelper->_timeLastCheck);
+    // safeSerial.print("2 ############################: ");
+    // safeSerial.println(ioTHelper->_timeLastCheck);
     // delay(1000);
 
     xTaskCreate(

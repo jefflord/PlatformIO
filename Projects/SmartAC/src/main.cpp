@@ -12,6 +12,9 @@ To Do:
 #include "helper.h"
 #include "DisplayUpdater.h"
 
+#include <esp_system.h>
+#include <esp_task_wdt.h>
+
 /**************/
 
 /**************/
@@ -31,6 +34,7 @@ To Do:
 // int pressDownHoldTime = 250;
 // int startAngle = 90;
 
+
 MyIoTHelper helper("SmartAC");
 TempRecorder *tempRecorder;
 DisplayUpdater *displayUpdater;
@@ -39,9 +43,11 @@ Servo myServo;
 // bool btn2IsDown = true;
 
 bool servoMoving = false;
+ThreadSafeSerial safeSerial;
 
 void pushServoButtonX(void *pvParameters)
 {
+
 
   servoMoving = true;
   pinMode(LED_ONBOARD, OUTPUT);
@@ -77,6 +83,9 @@ void pushServoButton()
     // we only want to do this one per, so we use okToGo
     if (okToGo)
     {
+
+      
+
       helper.chaos("wifi");
       vTaskDelay(pdMS_TO_TICKS(2000));
       helper.updateConfig();
@@ -100,6 +109,7 @@ void setup()
   displayUpdater->begin();
 
   helper.wiFiBegin("DarkNet", "7pu77ies77", displayUpdater);
+  // helper.wiFiBegin("PixelNet", "7pu77ies77", displayUpdater);
 
   // DisplayParameters params = {true, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
   // if (displayUpdater != NULL)

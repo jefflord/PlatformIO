@@ -13,9 +13,9 @@ void _showIcon(void *parameter)
     {
         xSemaphoreTake(me->mutex, portMAX_DELAY);
         gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-        // Serial.println("    gfx->drawXBitmap1");
+        // safeSerial.println("    gfx->drawXBitmap1");
         gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
-        // Serial.println("    gfx->drawXBitmap2");
+        // safeSerial.println("    gfx->drawXBitmap2");
         xSemaphoreGive(me->mutex);
         vTaskDelay(250 / portTICK_PERIOD_MS);
         xSemaphoreTake(me->mutex, portMAX_DELAY);
@@ -41,9 +41,9 @@ void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
         {
             xSemaphoreTake(mutex, portMAX_DELAY);
             gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-            // Serial.println("gfx->drawXBitmap1 BBBBBB");
+            // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
             gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
-            // Serial.println("gfx->drawXBitmap2 BBBBB");
+            // safeSerial.println("gfx->drawXBitmap2 BBBBB");
             xSemaphoreGive(mutex);
         }
     }
@@ -113,7 +113,7 @@ void DisplayUpdater::updateDisplay(void *parameter)
         auto timeSinceLast = millis() - lastUpdateTimeMillis;
         if (timeSinceLast > 5000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
         {
-            // Serial.println("Display update...");
+            // safeSerial.println("Display update...");
 
             lastUpdateTimeMillis = millis();
             forceUpdate = false;
@@ -134,9 +134,9 @@ void DisplayUpdater::updateDisplay(void *parameter)
             //   renderUploadIcon();
             // }
 
-            // Serial.println("getFormattedTime() start");
+            // safeSerial.println("getFormattedTime() start");
             gfx->println(me->ioTHelper->getFormattedTime());
-            // Serial.println("getFormattedTime() back");
+            // safeSerial.println("getFormattedTime() back");
 
             gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
