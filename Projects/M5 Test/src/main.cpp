@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
+#include <WiFi.h>
 #include "utils.h"
 #include "M5StickCPlus2.h"
 #include "esp32/ulp.h"
@@ -9,6 +11,8 @@
 #define BTN_B 39
 #define BTN_C 35
 #define BTN_C 35
+
+#define BRIGHTNESS 128
 
 auto _mutex = xSemaphoreCreateMutex();
 int btnCounter = 0;
@@ -58,14 +62,34 @@ void setup()
   while (!Serial)
     continue;
 
+  M5.begin();
   auto cfg = M5.config();
+
   StickCP2.begin(cfg);
   StickCP2.Display.setRotation(1);
   StickCP2.Display.setTextColor(RED);
   StickCP2.Display.setTextDatum(middle_center);
   // StickCP2.Display.setTextFont(&fonts::Orbitron_Light_24);
   StickCP2.Display.setTextSize(3);
-  StickCP2.Display.setBrightness(255);
+  StickCP2.Display.setBrightness(BRIGHTNESS);
+
+  WiFi.begin("DarkNet", "7pu77ies77");
+
+  StickCP2.Display.setCursor(0, 0);
+  while (!WiFi.isConnected())
+  {
+    Serial.print(".");
+    StickCP2.Display.print(".");
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+
+  ArduinoOTA.begin();
+
+  StickCP2.Display.clear();
+  StickCP2.Display.setCursor(0, 0);
+  StickCP2.Display.print(WiFi.localIP().toString());
+  Serial.printf("\n%s\n", WiFi.localIP().toString().c_str());
+  vTaskDelay(pdMS_TO_TICKS(5000));
 
   // StickCP2.Power.deepSleep(0);
   // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); // Disable all wakeup sources.
@@ -76,10 +100,8 @@ void setup()
   // M5.Power.Axp192;
   // M5.Power.Axp2101;
 
-  M5.begin();
-
-  xTaskCreatePinnedToCore(timerCallback, "TaskName0", 10000, NULL, 1, NULL, 0);
-  xTaskCreatePinnedToCore(timerCallback, "TaskName1", 10000, NULL, 1, NULL, 1);
+  // xTaskCreatePinnedToCore(timerCallback, "TaskName0", 10000, NULL, 1, NULL, 0);
+  // xTaskCreatePinnedToCore(timerCallback, "TaskName1", 10000, NULL, 1, NULL, 1);
 
   // TimerHandle_t myTimer = xTimerCreate(
   //     "My Timer",
@@ -157,7 +179,7 @@ void setup()
             StickCP2.Display.clear();
             StickCP2.Display.setCursor(0, 30);
             StickCP2.Display.printf("BAT: %dmv\nuptime: %ld\nBusy: %d", vol, millis() / 1000l, busySecs / 1000);
-            StickCP2.Display.setBrightness(255);
+            StickCP2.Display.setBrightness(BRIGHTNESS);
             xSemaphoreGive(_mutex);
           }
 
@@ -176,6 +198,7 @@ void setup()
 void loop()
 {
 
+  ArduinoOTA.handle();
   int buttonAState = digitalRead(BTN_A);
   int buttonBState = digitalRead(BTN_B);
   int buttonCState = digitalRead(BTN_C);
@@ -188,7 +211,7 @@ void loop()
       StickCP2.Display.clear();
       StickCP2.Display.setCursor(0, 30);
       StickCP2.Display.printf("Press %d\n", ++btnCounter);
-      StickCP2.Display.setBrightness(255);
+      StickCP2.Display.setBrightness(BRIGHTNESS);
       xSemaphoreGive(_mutex);
     }
     busyWait(33);
@@ -202,6 +225,7 @@ void loop()
   if (buttonCState == LOW)
   {
     Serial.println("Button C Pressed!");
+    ESP.restart();
   }
 
   delay(16);
