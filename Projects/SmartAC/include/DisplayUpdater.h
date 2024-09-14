@@ -6,6 +6,7 @@
 
 struct DisplayParameters;
 
+
 class DisplayUpdater
 {
 public:
