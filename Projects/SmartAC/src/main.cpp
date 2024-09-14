@@ -11,6 +11,7 @@ To Do:
 #include <ESP32Servo.h>
 #include "helper.h"
 #include "DisplayUpdater.h"
+#include <ArduinoOTA.h>
 
 #include <esp_system.h>
 #include <esp_task_wdt.h>
@@ -48,7 +49,8 @@ ThreadSafeSerial safeSerial;
 void pushServoButtonX(void *pvParameters)
 {
 
-
+  int x = millis();
+  safeSerial.print(x);
   servoMoving = true;
   pinMode(LED_ONBOARD, OUTPUT);
   DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
@@ -122,6 +124,8 @@ void setup()
   myServo.attach(SERVO_PIN);
 
   touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
+
+  ArduinoOTA.begin();
 }
 
 int lastPotValue = -1;
@@ -135,4 +139,6 @@ void loop()
     okToGo = true;
     lastPress = millis();
   }
+
+  ArduinoOTA.handle();
 }

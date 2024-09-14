@@ -581,6 +581,7 @@ void MyIoTHelper::Setup()
 
 // auto getTimeCount = 0;
 
+auto timeGuesses = 0;
 int64_t MyIoTHelper::getTime()
 {
 
@@ -599,21 +600,19 @@ int64_t MyIoTHelper::getTime()
 
     if (timeClientOk)
     {
-        // getTimeCount++;
-
-        // safeSerial.printf("Guessing time, last was %lld\n", lastNTPTime);
-        // safeSerial.printf("Guessing time, is %lld\n", (lastNTPTime + (millis() - lastNTPCheckTimeMs)));
-
+        
         lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
         lastNTPCheckTimeMs = millis();
     }
     else
     {
         // if we have one, but it' bad, guess the time.
-        safeSerial.printf("Guessing time, last was %lld\n", lastNTPTime);
+
+        timeGuesses++;
         lastNTPTime = lastNTPTime + (millis() - lastNTPCheckTimeMs);
         lastNTPCheckTimeMs = millis();
-        safeSerial.printf("Guessing time, is %lld\n", lastNTPTime);
+        auto testNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+        safeSerial.printf("time guess %d,  %lld vs %lld\n", timeGuesses, lastNTPTime, testNTPTime);
     }
 
     if (millis() - getTimeLastCheck() > 5 * 60 * 1000)
@@ -737,7 +736,7 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
     }
 
     safeSerial.print("\nConnected to Wi-Fi: ");
-    safeSerial.println(WiFi.localIP());
+    safeSerial.println(WiFi.localIP().toString());
 
     WiFiUDP ntpUDP;
 
