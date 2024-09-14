@@ -7,7 +7,8 @@ Done phase 1 (software):
   *- Records 3 temps
   *- Shows temps
   *- Has time
-  * - Upload animation
+  *- Upload animation
+  *- Real-time wifi connection status
   - Records IP for OTA update
     - Include boot reason
 

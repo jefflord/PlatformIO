@@ -55,6 +55,8 @@ void _showIcon(void *parameter)
 
 void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
 {
+    // safeSerial.println("hideIcon");
+
     displayParameters->displayUpdater = this;
 
     if (displayParameters->taskHandle != NULL)
@@ -72,11 +74,12 @@ void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
 void DisplayUpdater::flashIcon(DisplayParameters *displayParameters)
 {
     displayParameters->displayUpdater = this;
-    
-    // try to stop if flashing...
+    // safeSerial.println("X");
+    //  try to stop if flashing...
     if (displayParameters->taskHandle != NULL)
     {
-        // stop the flashing task
+        // safeSerial.println("Y");
+        //  stop the flashing task
         vTaskDelete(displayParameters->taskHandle);
         displayParameters->taskHandle = NULL;
     }
@@ -168,6 +171,7 @@ void DisplayUpdater::updateDisplay(void *parameter)
         auto temperatureF3 = (temperature_2_C * (9.0 / 5.0)) + 32;
 
         auto timeSinceLast = millis() - lastUpdateTimeMillis;
+
         if (timeSinceLast > 5000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
         {
             // safeSerial.println("Display update...");
@@ -177,6 +181,17 @@ void DisplayUpdater::updateDisplay(void *parameter)
             lastT1 = temperatureF1;
             lastT2 = temperatureF2;
             lastT3 = temperatureF3;
+
+            if (WiFi.isConnected())
+            {
+                DisplayParameters networkDpParms = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+                me->showIcon(&networkDpParms);
+            }
+            else
+            {
+                DisplayParameters networkDpParms = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+                me->hideIcon(&networkDpParms);
+            }
 
             xSemaphoreTake(me->mutex, portMAX_DELAY);
 

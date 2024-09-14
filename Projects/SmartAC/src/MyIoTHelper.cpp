@@ -1,6 +1,7 @@
 #include "MyIoTHelper.h"
 #include "DisplayUpdater.h"
 #include "TempRecorder.h"
+#include <esp_ota_ops.h>
 
 #ifndef PROJECT_SRC_DIR
 #define PROJECT_SRC_DIR "PROJECT_SRC_DIR"
@@ -61,8 +62,86 @@ bool MyIoTHelper::hasTimePassed()
     return elapsed >= delay_duration;
 }
 
+String byteArrayToHexString(const uint8_t *byteArray, size_t length)
+{
+    String hexString = "";
+    for (size_t i = 0; i < length; i++)
+    {
+        if (byteArray[i] < 16)
+        {
+            hexString += "0"; // Add leading zero for single digit hex values
+        }
+        hexString += String(byteArray[i], HEX);
+    }
+    return hexString;
+}
+
+void MyIoTHelper::regDevice()
+{
+
+    JsonDocument doc;
+
+    const esp_app_desc_t *appDescription = esp_ota_get_app_description();
+
+    // Populate the JSON document
+    doc["headers"]["Authorization"] = "letmein";
+    doc["queryStringParameters"]["action"] = "regDevice";
+    doc["queryStringParameters"]["MAC"] = WiFi.macAddress();
+    doc["queryStringParameters"]["IP"] = WiFi.localIP().toString();
+    doc["queryStringParameters"]["FW"] = tskKERNEL_VERSION_NUMBER;
+
+    doc["queryStringParameters"]["Version"] = String(appDescription->version);
+    doc["queryStringParameters"]["BuildDate"] = String(appDescription->date);
+    doc["queryStringParameters"]["BuildTime"] = String(appDescription->time);
+    doc["queryStringParameters"]["BuildHash"] = byteArrayToHexString(appDescription->app_elf_sha256, sizeof(appDescription->app_elf_sha256));
+
+    doc["httpMethod"] = "POST";
+
+    // Serialize JSON to a String
+    String jsonPayload;
+    serializeJson(doc, jsonPayload);
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        wiFiBegin(wifi_ssid, wifi_password, NULL);
+    }
+
+    HTTPClient http;
+    http.begin(url);
+
+    int httpCode = http.POST(jsonPayload);
+
+    String response = "";
+    if (httpCode == HTTP_CODE_OK)
+    {
+        response = http.getString();
+        http.end();
+    }
+    else
+    {
+        safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+        http.end();
+        return;
+    }
+
+    // safeSerial.println(response);
+
+    DeserializationError error = deserializeJson(doc, response);
+    if (error)
+    {
+        safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
+        return;
+    }
+    else
+    {
+        return;
+    }
+}
+
 int64_t MyIoTHelper::getSourceId(String name)
 {
+
+    regDevice();
 
     std::string key = name.c_str();
 
@@ -82,10 +161,13 @@ int64_t MyIoTHelper::getSourceId(String name)
 
     JsonDocument doc;
 
+    const esp_app_desc_t *appDescription = esp_ota_get_app_description();
+
     // Populate the JSON document
     doc["headers"]["Authorization"] = "letmein";
     doc["queryStringParameters"]["action"] = "addSource";
     doc["queryStringParameters"]["MAC"] = WiFi.macAddress();
+
     doc["queryStringParameters"]["name"] = name;
     doc["httpMethod"] = "POST";
 

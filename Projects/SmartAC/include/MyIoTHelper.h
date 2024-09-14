@@ -104,7 +104,7 @@ public:
     String configName;
 
     int64_t getSourceId(String name);
-
+    void regDevice();
     SemaphoreHandle_t mutex;
 
     int64_t _timeLastCheck = millis();
