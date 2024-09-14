@@ -6,7 +6,6 @@
 
 struct DisplayParameters;
 
-
 class DisplayUpdater
 {
 public:
@@ -31,19 +30,23 @@ public:
     // void renderClickIcon(bool showRenderClickIcon);
 
     void showIcon(DisplayParameters *displayParameters);
+    void hideIcon(DisplayParameters *displayParameters);
+    void flashIcon(DisplayParameters *displayParameters);
 
-    bool _showRenderClickIcon = false;
+    // bool _showRenderClickIcon = false;
 
 private:
 };
 
 struct DisplayParameters
 {
-    bool show;
-    bool flash;
+    int flashDuration;
+    int flashInterval;
+    bool flashLeaveOn;
     const unsigned char *icon; // Assuming 'icon' points to an array of bytes representing the icon data
     int16_t x;
     int16_t y;
     DisplayUpdater *displayUpdater;
+    TaskHandle_t taskHandle;
 };
 #endif

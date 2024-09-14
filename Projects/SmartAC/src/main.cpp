@@ -3,6 +3,21 @@ Notes:
   - Temp senor needs 5v and 4.6kΩR (pull-up I think)
   - Activation button has a extra 10kΩR (pull-up)
 
+Done phase 1 (software):
+  *- Records 3 temps
+  *- Shows temps
+  *- Has time
+  * - Upload animation
+  - Records IP for OTA update
+    - Include boot reason
+
+Done phase 1 (hardware):
+  - Touch button
+  - Soldered to PCB
+  - Tape down
+  - Power
+
+
 To Do:
   - Log start time, boot reason
   - Reboot from web
@@ -35,7 +50,6 @@ To Do:
 // int pressDownHoldTime = 250;
 // int startAngle = 90;
 
-
 MyIoTHelper helper("SmartAC");
 TempRecorder *tempRecorder;
 DisplayUpdater *displayUpdater;
@@ -48,19 +62,22 @@ ThreadSafeSerial safeSerial;
 
 void pushServoButtonX(void *pvParameters)
 {
-  
+
   servoMoving = true;
   pinMode(LED_ONBOARD, OUTPUT);
   DisplayUpdater *displayUpdater = static_cast<DisplayUpdater *>(pvParameters);
-  DisplayParameters params = {true, true, epd_bitmap_icons8_natural_user_interface_2_13, 0, 0, NULL};
-  displayUpdater->showIcon(&params);
+
+  DisplayParameters params = {-1, 250, false, epd_bitmap_icons8_natural_user_interface_2_13, 0, 0, NULL};
+  displayUpdater->flashIcon(&params);
+
   digitalWrite(LED_ONBOARD, HIGH);
   myServo.write(helper.servoAngle);
   vTaskDelay(pdMS_TO_TICKS(helper.pressDownHoldTime));
   myServo.write(helper.servoHomeAngle);
   digitalWrite(LED_ONBOARD, LOW);
-  params.show = false;
-  displayUpdater->showIcon(&params);
+
+  displayUpdater->hideIcon(&params);
+
   servoMoving = false;
 
   vTaskDelete(NULL);
@@ -83,8 +100,6 @@ void pushServoButton()
     // we only want to do this one per, so we use okToGo
     if (okToGo)
     {
-
-      
 
       helper.chaos("wifi");
       vTaskDelay(pdMS_TO_TICKS(2000));
@@ -110,12 +125,6 @@ void setup()
 
   helper.wiFiBegin("DarkNet", "7pu77ies77", displayUpdater);
   // helper.wiFiBegin("PixelNet", "7pu77ies77", displayUpdater);
-
-  // DisplayParameters params = {true, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
-  // if (displayUpdater != NULL)
-  // {
-  //   displayUpdater->showIcon(&params);
-  // }
 
   tempRecorder->begin();
 

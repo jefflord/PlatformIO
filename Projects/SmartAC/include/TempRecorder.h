@@ -30,6 +30,7 @@
 
 // Forward Declaration
 class MyIoTHelper;
+class DisplayUpdater;
 
 // Define a pair structure to hold data points
 using DataPoint = std::pair<uint64_t, float>;
@@ -42,6 +43,8 @@ struct SourceData
 };
 
 using DataStorage = std::vector<SourceData>;
+
+
 
 class TempRecorder
 {

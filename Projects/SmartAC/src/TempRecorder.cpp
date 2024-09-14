@@ -1,8 +1,11 @@
 #include "TempRecorder.h"
 #include "MyIoTHelper.h"
+#include "DisplayUpdater.h"
 
-
-
+void vDelay(unsigned long delayMs)
+{
+    vTaskDelay(pdMS_TO_TICKS(delayMs));
+}
 
 TempRecorder::TempRecorder(MyIoTHelper *_helper)
 {
@@ -81,12 +84,22 @@ void TempRecorder::clearSource(String name)
 void TempRecorder::flushAllDatatoDB()
 {
 
+    DisplayParameters params2 = {-1, 150, true, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+
+    if (ioTHelper->displayUpdater != NULL)
+    {
+        ioTHelper->displayUpdater->flashIcon(&params2);
+    }
+
     for (auto &source : storage)
     {
-        flushDatatoDB(source.sourceId);
 
-        // safeSerial.println("RETURN!!!!");
-        // break;
+        flushDatatoDB(source.sourceId);
+    }
+
+    if (ioTHelper->displayUpdater != NULL)
+    {
+        ioTHelper->displayUpdater->showIcon(&params2);
     }
 }
 
@@ -225,7 +238,6 @@ size_t TempRecorder::recordTemp(String name, int64_t time, float temperatureC)
 
     return size;
 }
-
 
 void TempRecorder::doTemp(void *parameter)
 {

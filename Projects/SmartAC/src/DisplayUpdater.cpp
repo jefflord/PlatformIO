@@ -7,52 +7,109 @@ void _showIcon(void *parameter)
     DisplayUpdater *me = dp->displayUpdater;
     auto gfx = me->gfx;
 
-    me->_showRenderClickIcon = true;
+    // me->_showRenderClickIcon = true;
 
-    while (me->_showRenderClickIcon)
+    if (dp->flashInterval == 0)
     {
-        xSemaphoreTake(me->mutex, portMAX_DELAY);
-        gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-        // safeSerial.println("    gfx->drawXBitmap1");
-        gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
-        // safeSerial.println("    gfx->drawXBitmap2");
-        xSemaphoreGive(me->mutex);
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-        xSemaphoreTake(me->mutex, portMAX_DELAY);
-        gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-        xSemaphoreGive(me->mutex);
-
-        vTaskDelay(250 / portTICK_PERIOD_MS);
+        dp->flashInterval = 500;
     }
+
+    auto stopTime = millis() + dp->flashDuration;
+
+    while (dp->flashDuration <= 0 || (dp->flashDuration > 0 && millis() < stopTime))
+    {
+
+        if (dp->flashLeaveOn)
+        {
+            xSemaphoreTake(me->mutex, portMAX_DELAY);
+            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+            xSemaphoreGive(me->mutex);
+        }
+        else
+        {
+            xSemaphoreTake(me->mutex, portMAX_DELAY);
+            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+            gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+            xSemaphoreGive(me->mutex);
+        }
+        vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
+
+        if (dp->flashLeaveOn)
+        {
+            xSemaphoreTake(me->mutex, portMAX_DELAY);
+            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+            gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+            xSemaphoreGive(me->mutex);
+        }
+        else
+        {
+            xSemaphoreTake(me->mutex, portMAX_DELAY);
+            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+            xSemaphoreGive(me->mutex);
+        }
+        vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
+    }
+
     vTaskDelete(NULL);
+}
+
+void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
+{
+    displayParameters->displayUpdater = this;
+
+    if (displayParameters->taskHandle != NULL)
+    {
+        // stop the flashing task
+        vTaskDelete(displayParameters->taskHandle);
+        displayParameters->taskHandle = NULL;
+    }
+
+    xSemaphoreTake(mutex, portMAX_DELAY);
+    gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+    xSemaphoreGive(mutex);
+}
+
+void DisplayUpdater::flashIcon(DisplayParameters *displayParameters)
+{
+    displayParameters->displayUpdater = this;
+    
+    // try to stop if flashing...
+    if (displayParameters->taskHandle != NULL)
+    {
+        // stop the flashing task
+        vTaskDelete(displayParameters->taskHandle);
+        displayParameters->taskHandle = NULL;
+    }
+
+    xTaskCreate(_showIcon, "showIcon", 2048 * 4, displayParameters, 1, &displayParameters->taskHandle);
+
+    if (displayParameters->flashDuration > 0)
+    {
+        // don't return this since it will stop itself.
+        displayParameters->taskHandle = NULL;
+    }
 }
 
 void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
 {
     displayParameters->displayUpdater = this;
-    _showRenderClickIcon = false;
-    if (displayParameters->show)
+
+    TaskHandle_t taskHandle = NULL; // Initialize the task handle
+                                    //_showRenderClickIcon = false;
+
+    if (displayParameters->taskHandle != NULL)
     {
-        if (displayParameters->flash)
-        {
-            xTaskCreate(_showIcon, "showIcon", 2048 * 4, displayParameters, 1, NULL);
-        }
-        else
-        {
-            xSemaphoreTake(mutex, portMAX_DELAY);
-            gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-            // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
-            gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
-            // safeSerial.println("gfx->drawXBitmap2 BBBBB");
-            xSemaphoreGive(mutex);
-        }
+        // stop the flashing task
+        vTaskDelete(displayParameters->taskHandle);
+        displayParameters->taskHandle = NULL;
     }
-    else
-    {
-        xSemaphoreTake(mutex, portMAX_DELAY);
-        gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-        xSemaphoreGive(mutex);
-    }
+
+    xSemaphoreTake(mutex, portMAX_DELAY);
+    gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+    // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
+    gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
+    // safeSerial.println("gfx->drawXBitmap2 BBBBB");
+    xSemaphoreGive(mutex);
 }
 
 void DisplayUpdater::updateDisplay(void *parameter)

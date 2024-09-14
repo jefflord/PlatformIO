@@ -490,10 +490,11 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
         displayUpdater = _displayUpdater;
     }
 
-    DisplayParameters params2 = {true, true, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+    // flash
+    DisplayParameters params2 = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
     if (displayUpdater != NULL)
     {
-        displayUpdater->showIcon(&params2);
+        displayUpdater->flashIcon(&params2);
     }
 
     wifi_ssid = ssid;
@@ -508,8 +509,6 @@ wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase,
 
     if (displayUpdater != NULL)
     {
-        params2.show = true;
-        params2.flash = false;
         displayUpdater->showIcon(&params2);
     }
 
