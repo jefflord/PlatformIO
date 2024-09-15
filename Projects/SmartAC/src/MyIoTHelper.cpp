@@ -594,16 +594,29 @@ void MyIoTHelper::SetDisplay(DisplayUpdater *_displayUpdater)
     displayUpdater = _displayUpdater;
 }
 
+void MyIoTHelper::setSafeBoot()
+{
+    safeBoot = true;
+}
+
 void MyIoTHelper::wiFiBegin()
 {
     // Try to connect to the saved WiFi credentials
-    if (WiFi.status() != WL_CONNECTED)
+
+    if (safeBoot)
+    {
+        WiFi.begin("", "");
+    }
+
+    if (!safeBoot && WiFi.status() != WL_CONNECTED)
     {
         WiFi.begin();
     }
 
+    safeBoot = false;
+
     // Wait for connection
-    int timeout = 30000; // Timeout after 10 seconds
+    int timeout = 20000; // Timeout after 10 seconds
     int elapsed = 0;
     Serial.println("\nStarting WiFi...");
 
@@ -632,7 +645,7 @@ void MyIoTHelper::wiFiBegin()
         params2 = {-1, 100, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
         if (displayUpdater != NULL)
         {
-            displayUpdater->hideIcon(&params2);
+            displayUpdater->flashIcon(&params2);
         }
 
         Serial.println("\nStarting SmartConfig...");

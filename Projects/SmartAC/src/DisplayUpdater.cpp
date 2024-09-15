@@ -182,6 +182,8 @@ void DisplayUpdater::updateDisplay(void *parameter)
             lastT2 = temperatureF2;
             lastT3 = temperatureF3;
 
+            // safeSerial.printf("updateDisplay %f, %f, %f\n", temperatureF1, temperatureF2, temperatureF3);
+
             if (WiFi.isConnected())
             {
                 DisplayParameters networkDpParms = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
@@ -198,17 +200,8 @@ void DisplayUpdater::updateDisplay(void *parameter)
             gfx->setTextColor(WHITE);
 
             gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
-            // char randomChar = (char)random(97, 127);
             gfx->setCursor(0, SET_CUR_TOP_Y + 16);
-
-            // if (uploadingData)
-            // {
-            //   renderUploadIcon();
-            // }
-
-            // safeSerial.println("getFormattedTime() start");
             gfx->println(me->ioTHelper->getFormattedTime());
-            // safeSerial.println("getFormattedTime() back");
 
             gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
@@ -217,8 +210,6 @@ void DisplayUpdater::updateDisplay(void *parameter)
             gfx->setTextColor(BLUE);
             sprintf(bufferForNumber, "%2.0f", temperatureF1);
             gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF1));
             gfx->setTextSize(FONT_SIZE);
 
             auto y = gfx->getCursorY();
@@ -226,16 +217,12 @@ void DisplayUpdater::updateDisplay(void *parameter)
             gfx->setTextColor(RED);
             sprintf(bufferForNumber, "%2.0f", temperatureF2);
             gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF2));
             gfx->setTextSize(FONT_SIZE);
 
             gfx->setCursor(gfx->getCursorX() + 12, y);
             gfx->setTextColor(GREEN);
             sprintf(bufferForNumber, "%2.0f", temperatureF3);
             gfx->print(bufferForNumber);
-            // gfx->setTextSize(FONT_SIZE - 1);
-            // gfx->print(getDecimalPart(temperatureF3));
             gfx->setTextSize(FONT_SIZE);
 
             xSemaphoreGive(me->mutex);
@@ -247,8 +234,6 @@ void DisplayUpdater::updateDisplay(void *parameter)
 
 void DisplayUpdater::begin()
 {
-    Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
-    gfx = new Arduino_SSD1331(bus, OLED_RES);
 
     xTaskCreate(
         updateDisplay,   // Function to run on the new thread
@@ -262,6 +247,9 @@ void DisplayUpdater::begin()
 
 DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder)
 {
+    Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
+    gfx = new Arduino_SSD1331(bus, OLED_RES);
+
     mutex = xSemaphoreCreateMutex();
     ioTHelper = _helper;
     tempRecorder = _tempRecorder;

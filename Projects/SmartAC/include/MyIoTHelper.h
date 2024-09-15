@@ -103,6 +103,7 @@ public:
     wl_status_t wiFiAutoConnect();
 
     void wiFiBegin();
+    void setSafeBoot();
 
     wl_status_t ___wiFiBegin(const String &ssid, const String &passphrase);
 
@@ -133,6 +134,8 @@ private:
     WiFiUDP ntpUDP;
     NTPClient *timeClient = NULL;
 
+    bool safeBoot = false;
+    
     bool timeClientOk = false;
 
     void setTimeLastCheck(int64_t value);

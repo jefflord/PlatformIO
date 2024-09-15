@@ -31,9 +31,14 @@ To Do:
 #include "MyIoTHelper.h"
 #include "DisplayUpdater.h"
 #include <ArduinoOTA.h>
+#include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 
 #include <esp_system.h>
 #include <esp_task_wdt.h>
+
+#include <FS.h>     // File System library
+#include <SPIFFS.h> // SPIFFS file system
 
 /**************/
 
@@ -117,93 +122,124 @@ void pushServoButton()
     xTaskCreate(pushServoButtonX, "pushServoButton", 2048 * 8, displayUpdater, 1, NULL);
   }
 }
+AsyncWebServer server(8222);
 
-void showWiFiMode()
+void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
+  Serial.println("json!");
+  // Parse incoming JSON
+  JsonDocument jsonDoc;
+  DeserializationError error = deserializeJson(jsonDoc, data);
 
-  int currentMode = WiFi.getMode();
-
-  // Print the mode to the serial monitor for debugging
-  Serial.print("Current Wi-Fi mode: ");
-  switch (currentMode)
+  if (error)
   {
-  case WIFI_OFF:
-    Serial.println("OFF");
-    break;
-  case WIFI_STA:
-    Serial.println("STA");
-    break;
-  case WIFI_AP:
-    Serial.println("AP");
-    break;
-  case WIFI_AP_STA:
-    Serial.println("AP_STA");
-    break;
-  default:
-    Serial.println("Unknown");
-    break;
+    Serial.println("Error parsing JSON");
+    request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+    return;
   }
+
+  // Extract data from JSON
+  const char *name = jsonDoc["name"];
+  int age = jsonDoc["age"];
+  bool hitSwitch = jsonDoc["hitSwitch"];
+
+  if (hitSwitch)
+  {
+    safeSerial.println("Doing pushServoButton");
+    pushServoButton();
+  }
+  else
+  {
+    safeSerial.println("Not doing pushServoButton");
+  }
+
+  // Print received data
+  // Serial.printf("Name: %s, Age: %d\n", name, age);
+
+  // int currentLedState = digitalRead(LED_BUILTIN);
+  // sprintf()
+
+  JsonDocument doc;
+
+  // Add values in the document
+  doc["sensor"] = "gps";
+  doc["status"] = "success";
+  doc["millis"] = millis();
+
+  String responseData = "";
+  serializeJsonPretty(doc, responseData);
+  // Send a JSON response with CSP header
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseData);
+
+  // Add Content Security Policy (CSP) header
+  response->addHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'");
+
+  // Send the response
+  request->send(response);
 }
 
-void wifiShit()
+void setupServer()
 {
 
-  safeSerial.println("wifiShit start");
-  showWiFiMode();
+  SPIFFS.begin(true);
 
-  WiFi.mode(WIFI_STA);
-  // Try to connect to the saved WiFi credentials
-  WiFi.begin();
+  server.on("/js/main.js", HTTP_GET, [](AsyncWebServerRequest *request)
+            {              
+              safeSerial.println("main.js request");
+              request->send(SPIFFS, "/wwwroot/js/main.js", "text/html"); });
 
-  // Wait for connection
-  int timeout = 10000; // Timeout after 10 seconds
-  int elapsed = 0;
-  safeSerial.println("\nStarting WiFi...");
+  server.on("/spiffs", HTTP_GET, [](AsyncWebServerRequest *request)
+            {              
+              safeSerial.println("spiffs request");
+              request->send(SPIFFS, "/wwwroot/index.html", "text/html"); });
 
-  while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
-  {
-    delay(500);
-    Serial.print(".");
-    elapsed += 500;
-  }
+  
 
-  bool smartConfigUsed = false;
-  // If not connected, start SmartConfig
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    smartConfigUsed = true;
-    WiFi.mode(WIFI_AP_STA);
-    Serial.println("\nStarting SmartConfig...");
-    WiFi.beginSmartConfig();
+  // server.on("/spiffsgz", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           {
+  //   AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html.gz", "text/html");
+  //   response->addHeader("Content-Encoding", "gzip");
+  //   request->send(response); });
 
-    // Wait for SmartConfig to finish
-    while (!WiFi.smartConfigDone())
-    {
-      delay(500);
-      Serial.print(".");
-    }
+  server.on("/html", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("html!");
+              String html = "<!DOCTYPE html><html><head><link rel='icon' href='data:,'><title>ESP32 Web Server!!!!</title></head><body><h1>Hello from ESP32!!!!</h1></body></html>";
+              
+              // Send a JSON response with CSP header
+              AsyncWebServerResponse *response = request->beginResponse(200, "text/html", html);
 
-    Serial.println("\nSmartConfig done.");
-    // Serial.printf("Connected to WiFi: %s\n", WiFi.SSID().c_str());
-  }
-  else
-  {
-    // Serial.printf("Connected to saved WiFi: %s\n", WiFi.SSID().c_str());
-  }
+              // Add Content Security Policy (CSP) header
+              response->addHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'");
+              response->addHeader("Test", "!!!");
 
-  if (smartConfigUsed)
-  {
-    WiFi.disconnect();
-    WiFi.mode(WIFI_STA);
-    WiFi.begin();
-    Serial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-  }
-  else
-  {
-    Serial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-  }
+              // Send the response
+              request->send(response); });
 
-  showWiFiMode();
+  server.on("/htmlx", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("htmlx!");
+    String html = "<!DOCTYPE html><html><head><link rel='icon' href='data:,'><title>ESP32 Web htmlx!</title></head><body><h1>Hello from htmlx!</h1></body></html>";
+    
+    // Send the HTML response
+    request->send(200, "text/html", html); });
+
+  server.on("/htmly", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("htmly!");
+    String html = "<!DOCTYPE html><html><head><link rel='icon' href='data:,'><title>ESP32 Web htmly!</title></head><body><h1>Hello from htmly!</h1></body></html>";
+    
+    // Send the HTML response
+    request->send(200, "text/html", html); });
+
+  // server.on("/json", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+  //           { handleJsonPost(request, data, len, index, total); }
+
+  server.on("/json", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, handleJsonPost);
+
+  // Start the server
+
+  server.begin();
 }
 
 void setup()
@@ -215,6 +251,12 @@ void setup()
   displayUpdater = new DisplayUpdater(&helper, tempRecorder);
   helper.SetDisplay(displayUpdater);
 
+  if (touchRead(TOUCH_PIN) < 50)
+  {
+    Serial.println("Touch on boot detected");
+    helper.setSafeBoot();
+  }
+
   displayUpdater->begin();
 
   helper.wiFiBegin();
@@ -226,40 +268,11 @@ void setup()
   touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
 
   ArduinoOTA.begin();
-}
 
-void loop_X()
-{
-
-  Serial.println("");
-  Serial.printf("WiFi %d\n", WiFi.status());
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-
-  delay(2000);
-}
-
-void setup_X()
-{
-
-  helper.Setup();
-
-  
-  
-  tempRecorder = new TempRecorder(&helper);
-  displayUpdater = new DisplayUpdater(&helper, tempRecorder);
-  helper.SetDisplay(displayUpdater);
-  displayUpdater->begin();
-
-  helper.wiFiBegin();
-
-  tempRecorder->begin();
-
-  myServo.attach(SERVO_PIN);
-
-  touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
-
-  ArduinoOTA.begin();
+  safeSerial.println("setupServer starting");
+  setupServer();
+  safeSerial.println("setupServer done");
+  delay(1000);
 }
 
 int lastPotValue = -1;
