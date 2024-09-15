@@ -271,7 +271,6 @@ void loop()
   {
     Serial.println("Button C Pressed, clearning WiFi and restarting.");
     // wifiManager.resetSettings();
-
     ESP.restart();
   }
 

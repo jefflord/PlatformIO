@@ -105,7 +105,7 @@ void MyIoTHelper::regDevice()
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        wiFiBegin();
     }
 
     HTTPClient http;
@@ -183,7 +183,7 @@ int64_t MyIoTHelper::getSourceId(String name)
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        wiFiBegin();
     }
 
     HTTPClient http;
@@ -320,7 +320,7 @@ void MyIoTHelper::internalUpdateConfig()
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        wiFiBegin(wifi_ssid, wifi_password);
+        wiFiBegin();
     }
 
     if (WiFi.status() == WL_CONNECTED)
@@ -491,7 +491,7 @@ int64_t MyIoTHelper::getTime()
                     me->timeClientOk = false;
                     if (WiFi.status() != WL_CONNECTED)
                     {
-                        me->wiFiBegin(me->wifi_ssid, me->wifi_password);
+                        me->wiFiBegin();
                     }
                     else
                     {
@@ -594,13 +594,108 @@ void MyIoTHelper::SetDisplay(DisplayUpdater *_displayUpdater)
     displayUpdater = _displayUpdater;
 }
 
-wl_status_t MyIoTHelper::wiFiBegin(const String &ssid, const String &passphrase)
+void MyIoTHelper::wiFiBegin()
 {
+    // Try to connect to the saved WiFi credentials
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        WiFi.begin();
+    }
 
-    // if (ssid == "")
-    // {
-    //     return wiFiAutoConnect();
-    // }
+    // Wait for connection
+    int timeout = 30000; // Timeout after 10 seconds
+    int elapsed = 0;
+    Serial.println("\nStarting WiFi...");
+
+    // flash
+    DisplayParameters params2 = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+    if (displayUpdater != NULL)
+    {
+        displayUpdater->flashIcon(&params2);
+    }
+
+    while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
+    {
+        delay(500);
+        Serial.print("O");
+        elapsed += 500;
+    }
+
+    if (displayUpdater != NULL)
+    {
+        displayUpdater->hideIcon(&params2);
+    }
+
+    // If not connected, start SmartConfig
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        params2 = {-1, 100, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
+        if (displayUpdater != NULL)
+        {
+            displayUpdater->hideIcon(&params2);
+        }
+
+        Serial.println("\nStarting SmartConfig...");
+        WiFi.beginSmartConfig();
+
+        // Wait for SmartConfig to finish
+        while (!WiFi.smartConfigDone())
+        {
+            delay(500);
+            Serial.print("X");
+        }
+
+        Serial.println("\nSmartConfig done.");
+        // Serial.printf("Connected to WiFi: %s\n", WiFi.SSID().c_str());
+    }
+    else
+    {
+        // Serial.printf("Connected to saved WiFi: %s\n", WiFi.SSID().c_str());
+    }
+
+    safeSerial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+
+    if (displayUpdater != NULL)
+    {
+        displayUpdater->showIcon(&params2);
+    }
+
+    WiFiUDP ntpUDP;
+
+    if (timeClient != NULL)
+    {
+        delete timeClient;
+    }
+
+    // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
+    timeClient->begin();
+
+    try
+    {
+        auto updated = timeClient->update();
+
+        if (updated)
+        {
+            timeClientOk = true;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        safeSerial.println(e.what());
+    }
+
+    safeSerial.print("Current time: ");
+    safeSerial.println(timeClient->getFormattedTime());
+
+    lastNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
+    lastNTPReadMillis = millis();
+
+    updateConfig();
+}
+
+wl_status_t MyIoTHelper::___wiFiBegin(const String &ssid, const String &passphrase)
+{
 
     auto result = WiFi.begin(ssid, passphrase);
 

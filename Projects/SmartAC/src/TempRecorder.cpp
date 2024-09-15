@@ -135,7 +135,7 @@ int64_t TempRecorder::flushDatatoDB(long long sourceId)
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        ioTHelper->wiFiBegin(ioTHelper->wifi_ssid, ioTHelper->wifi_password);
+        ioTHelper->wiFiBegin();
     }
 
     HTTPClient http;

@@ -102,7 +102,10 @@ public:
 
     wl_status_t wiFiAutoConnect();
 
-    wl_status_t wiFiBegin(const String &ssid, const String &passphrase);
+    void wiFiBegin();
+
+    wl_status_t ___wiFiBegin(const String &ssid, const String &passphrase);
+
     void SetDisplay(DisplayUpdater *_displayUpdater);
     String configName;
 

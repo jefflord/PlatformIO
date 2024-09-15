@@ -1,7 +1,7 @@
 /*
 Notes:
-  - Temp senor needs 5v and 4.6kΩR (pull-up I think)
-  - Activation button has a extra 10kΩR (pull-up)
+  - Temp senor needs 5v and 4.6kOR (pull-up I think)
+  - Activation button has a extra 10kOR (pull-up)
 
 Done phase 1 (software):
   *- Records 3 temps
@@ -91,58 +91,6 @@ auto lastTouch = millis();
 auto lastPress = millis() * 2;
 auto okToGo = false;
 
-bool SmartConfig()
-{
-  Serial.println("beginSmartConfig...");
-  delay(2000);
-  Serial.println("beginSmartConfig...Go...");
-
-  // Set ESP32 to station mode
-  WiFi.mode(WIFI_AP_STA);
-
-  // Serial.println("WIFI_AP_STA done");
-
-  // WiFi.mode(WIFI_STA);
-
-  // Serial.println("WIFI_STA done");
-
-  // Start SmartConfig
-  Serial.println("beginSmartConfig in 2000");
-  delay(2000);
-  try
-  {
-    WiFi.beginSmartConfig();
-  }
-  catch (const std::exception &e)
-  {
-    safeSerial.println("e.what()!!!");
-    safeSerial.println(e.what());
-  }
-
-  return false;
-
-  delay(2000);
-  Serial.println("beginSmartConfig going");
-  delay(2000);
-
-  while (!WiFi.smartConfigDone())
-  {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("SmartConfig received.");
-
-  Serial.println("Waiting for WiFi");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-
-  return true;
-}
 void pushServoButton()
 {
   // record each time we are touched
@@ -170,6 +118,94 @@ void pushServoButton()
   }
 }
 
+void showWiFiMode()
+{
+
+  int currentMode = WiFi.getMode();
+
+  // Print the mode to the serial monitor for debugging
+  Serial.print("Current Wi-Fi mode: ");
+  switch (currentMode)
+  {
+  case WIFI_OFF:
+    Serial.println("OFF");
+    break;
+  case WIFI_STA:
+    Serial.println("STA");
+    break;
+  case WIFI_AP:
+    Serial.println("AP");
+    break;
+  case WIFI_AP_STA:
+    Serial.println("AP_STA");
+    break;
+  default:
+    Serial.println("Unknown");
+    break;
+  }
+}
+
+void wifiShit()
+{
+
+  safeSerial.println("wifiShit start");
+  showWiFiMode();
+
+  WiFi.mode(WIFI_STA);
+  // Try to connect to the saved WiFi credentials
+  WiFi.begin();
+
+  // Wait for connection
+  int timeout = 10000; // Timeout after 10 seconds
+  int elapsed = 0;
+  safeSerial.println("\nStarting WiFi...");
+
+  while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
+  {
+    delay(500);
+    Serial.print(".");
+    elapsed += 500;
+  }
+
+  bool smartConfigUsed = false;
+  // If not connected, start SmartConfig
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    smartConfigUsed = true;
+    WiFi.mode(WIFI_AP_STA);
+    Serial.println("\nStarting SmartConfig...");
+    WiFi.beginSmartConfig();
+
+    // Wait for SmartConfig to finish
+    while (!WiFi.smartConfigDone())
+    {
+      delay(500);
+      Serial.print(".");
+    }
+
+    Serial.println("\nSmartConfig done.");
+    // Serial.printf("Connected to WiFi: %s\n", WiFi.SSID().c_str());
+  }
+  else
+  {
+    // Serial.printf("Connected to saved WiFi: %s\n", WiFi.SSID().c_str());
+  }
+
+  if (smartConfigUsed)
+  {
+    WiFi.disconnect();
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+    Serial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+  }
+  else
+  {
+    Serial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+  }
+
+  showWiFiMode();
+}
+
 void setup()
 {
 
@@ -178,12 +214,44 @@ void setup()
   tempRecorder = new TempRecorder(&helper);
   displayUpdater = new DisplayUpdater(&helper, tempRecorder);
   helper.SetDisplay(displayUpdater);
+
   displayUpdater->begin();
 
-  if (!SmartConfig())
-  {
-    helper.wiFiBegin("DarkNet", "7pu77ies77");
-  }
+  helper.wiFiBegin();
+
+  tempRecorder->begin();
+
+  myServo.attach(SERVO_PIN);
+
+  touchAttachInterrupt(TOUCH_PIN, pushServoButton, 50);
+
+  ArduinoOTA.begin();
+}
+
+void loop_X()
+{
+
+  Serial.println("");
+  Serial.printf("WiFi %d\n", WiFi.status());
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  delay(2000);
+}
+
+void setup_X()
+{
+
+  helper.Setup();
+
+  
+  
+  tempRecorder = new TempRecorder(&helper);
+  displayUpdater = new DisplayUpdater(&helper, tempRecorder);
+  helper.SetDisplay(displayUpdater);
+  displayUpdater->begin();
+
+  helper.wiFiBegin();
 
   tempRecorder->begin();
 
@@ -196,6 +264,7 @@ void setup()
 
 int lastPotValue = -1;
 
+TaskHandle_t ArduinoOTAHandle = NULL;
 void loop()
 {
 
@@ -207,4 +276,6 @@ void loop()
   }
 
   ArduinoOTA.handle();
+
+  vTaskDelay(pdMS_TO_TICKS(16));
 }
