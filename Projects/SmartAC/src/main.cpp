@@ -9,6 +9,8 @@ Done phase 1 (software):
   *- Has time
   *- Upload animation
   *- Real-time wifi connection status
+  - Keep AP password out of source code.
+  - Method to force enter WiFi setup
   - Records IP for OTA update
     - Include boot reason
 
@@ -23,6 +25,7 @@ To Do:
   - Log start time, boot reason
   - Reboot from web
 */
+
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include "MyIoTHelper.h"
@@ -88,6 +91,58 @@ auto lastTouch = millis();
 auto lastPress = millis() * 2;
 auto okToGo = false;
 
+bool SmartConfig()
+{
+  Serial.println("beginSmartConfig...");
+  delay(2000);
+  Serial.println("beginSmartConfig...Go...");
+
+  // Set ESP32 to station mode
+  WiFi.mode(WIFI_AP_STA);
+
+  // Serial.println("WIFI_AP_STA done");
+
+  // WiFi.mode(WIFI_STA);
+
+  // Serial.println("WIFI_STA done");
+
+  // Start SmartConfig
+  Serial.println("beginSmartConfig in 2000");
+  delay(2000);
+  try
+  {
+    WiFi.beginSmartConfig();
+  }
+  catch (const std::exception &e)
+  {
+    safeSerial.println("e.what()!!!");
+    safeSerial.println(e.what());
+  }
+
+  return false;
+
+  delay(2000);
+  Serial.println("beginSmartConfig going");
+  delay(2000);
+
+  while (!WiFi.smartConfigDone())
+  {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("SmartConfig received.");
+
+  Serial.println("Waiting for WiFi");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+
+  return true;
+}
 void pushServoButton()
 {
   // record each time we are touched
@@ -122,10 +177,13 @@ void setup()
 
   tempRecorder = new TempRecorder(&helper);
   displayUpdater = new DisplayUpdater(&helper, tempRecorder);
+  helper.SetDisplay(displayUpdater);
   displayUpdater->begin();
 
-  helper.wiFiBegin("DarkNet", "7pu77ies77", displayUpdater);
-  // helper.wiFiBegin("PixelNet", "7pu77ies77", displayUpdater);
+  if (!SmartConfig())
+  {
+    helper.wiFiBegin("DarkNet", "7pu77ies77");
+  }
 
   tempRecorder->begin();
 

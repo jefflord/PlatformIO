@@ -6,7 +6,9 @@
 #include "esp32/ulp.h"
 #include <chrono>
 #include "esp_sleep.h"
-
+// #include <ESP_WiFiManager.h>
+// #include <ESPAsyncUDP.h>
+// #include <ESPAsync_WiFiManager_Lite.h>
 #define BTN_A 37
 #define BTN_B 39
 #define BTN_C 35
@@ -56,6 +58,9 @@ void timerCallback(TimerHandle_t xTimer)
   }
 }
 
+// ESP_WiFiManager wm;
+// ESPAsync_WiFiManager_Lite wifiManager;
+
 void setup()
 {
   Serial.begin(115200);
@@ -73,21 +78,61 @@ void setup()
   StickCP2.Display.setTextSize(3);
   StickCP2.Display.setBrightness(BRIGHTNESS);
 
-  WiFi.begin("DarkNet", "7pu77ies77");
+  {
+
+    // Set ESP32 to station mode
+    WiFi.mode(WIFI_AP_STA);
+
+    // Start SmartConfig
+    WiFi.beginSmartConfig();
+
+    Serial.setDebugOutput(true);
+
+    Serial.println("Waiting for SmartConfig.");
+    while (!WiFi.smartConfigDone())
+    {
+      delay(500);
+      Serial.print(".");
+    }
+
+    Serial.println("");
+    Serial.println("SmartConfig received.");
+
+    Serial.println("Waiting for WiFi");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+
+    Serial.println("");
+    Serial.println("WiFi Connected.");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  }
+  // wifiManager.begin();
+  //  bool res = wifiManager.autoConnect("DarkNet ESP Setup"); // anonymous ap
+
+  // if (!res)
+  // {
+  //   Serial.println("Failed to connect, restarting in 30 seconds.");
+  //   delay(30000);
+  //   ESP.restart();
+  // }
 
   StickCP2.Display.setCursor(0, 0);
-  while (!WiFi.isConnected())
-  {
-    Serial.print(".");
-    StickCP2.Display.print(".");
-    vTaskDelay(pdMS_TO_TICKS(500));
-  }
+  // while (!WiFi.isConnected())
+  // {
+  //   Serial.print(".");
+  //   StickCP2.Display.print(".");
+  //   vTaskDelay(pdMS_TO_TICKS(500));
+  // }
 
   ArduinoOTA.begin();
 
   StickCP2.Display.clear();
-  StickCP2.Display.setCursor(0, 0);
-  StickCP2.Display.print(WiFi.localIP().toString());
+  StickCP2.Display.setCursor(0, 10);
+  StickCP2.Display.printf("Connected:\n%s", WiFi.localIP().toString().c_str());
   Serial.printf("\n%s\n", WiFi.localIP().toString().c_str());
   vTaskDelay(pdMS_TO_TICKS(5000));
 
@@ -224,7 +269,9 @@ void loop()
 
   if (buttonCState == LOW)
   {
-    Serial.println("Button C Pressed!");
+    Serial.println("Button C Pressed, clearning WiFi and restarting.");
+    // wifiManager.resetSettings();
+
     ESP.restart();
   }
 

@@ -1,0 +1,12 @@
+[
+    {
+        "sourceId": 1,
+        "name": "basement",        
+        "device": "12:34:56:78:AB"
+    },
+    {
+        "sourceId": 2,
+        "name": "ac-vent",
+        "device": "12:34:56:78:AB"
+    }
+]
