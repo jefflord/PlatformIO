@@ -9,17 +9,25 @@
 
 static void resetWifiTask(void *pvParameter)
 {
+
     // Cast the parameter back to a MyIoTHelper* object
-    MyIoTHelper *x = static_cast<MyIoTHelper *>(pvParameter);
+    MyIoTHelper *iotHelper = static_cast<MyIoTHelper *>(pvParameter);
 
     for (;;)
     {
-        if (x->x_resetWifi)
+        if (iotHelper->x_resetWifi)
         {
+
+            auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
+            {
+                printf("Task 'resetWifiTask' high-water mark: %u bytes\n", uxHighWaterMark);
+            }
+
             safeSerial.println("killing wifi b");
             WiFi.disconnect(false);
             safeSerial.println("wifi killed b");
-            x->x_resetWifi = false;
+            iotHelper->x_resetWifi = false;
         }
         vTaskDelay(pdMS_TO_TICKS(16));
     }
@@ -262,11 +270,20 @@ void MyIoTHelper::updateConfig()
             [](void *parameter)
             {
                 TaskParams *params = static_cast<TaskParams *>(parameter);
+                // safeSerial.println("before internalUpdateConfig");
                 params->obj->internalUpdateConfig();
+                // safeSerial.println("after internalUpdateConfig");
+
+                auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+                if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
+                {
+                    printf("Task 'internalUpdateConfig' high-water mark: %u bytes\n", uxHighWaterMark);
+                }
+
                 vTaskDelete(NULL);
             },                      // Function to run on the new thread
             "internalUpdateConfig", // Name of the task (for debugging)
-            2048 * 4,               // Stack size (in bytes)
+            1024 * 4,               // Stack size (in bytes)
             params,                 // Parameter passed to the task
             1,                      // Priority (0-24, higher number means higher priority)
             NULL                    // Handle to the task (not used here)
@@ -295,7 +312,7 @@ void MyIoTHelper::chaos(const String &mode)
 void MyIoTHelper::internalUpdateConfig()
 {
 
-    safeSerial.println("internalUpdateConfig");
+    // safeSerial.println("internalUpdateConfig");
 
     lastConfigUpdateTime = std::chrono::steady_clock::now();
     configHasBeenDownloaded = true;
@@ -515,14 +532,16 @@ int64_t MyIoTHelper::getTime()
                     safeSerial.println(e.what());
                 }
 
+                auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+                printf("Task 'getTimeChild' high-water mark: %u bytes\n", uxHighWaterMark);
+
                 vTaskDelete(NULL);
-            },              // Function to run on the new thread
-            "getTimeChild", // Name of the task (for debugging)
-            2048 * 2,       // Stack size (in bytes) // 8192
-            this,           // Parameter passed to the task
-            1,              // Priority (0-24, higher number means higher priority)
-            NULL            // Handle to the task (not used here)
-        );
+            },
+            "getTimeChild",
+            1024,
+            this,
+            1,
+            NULL);
     }
 
     return lastNTPTime;

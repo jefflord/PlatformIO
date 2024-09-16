@@ -1,30 +1,34 @@
-class SmartAC {
-    hello() {
+const url = 'http://10.0.0.79:8222/json'; // Replace <ESP32-IP> with your ESP32's IP address
 
-        const url = '/json'; // Replace <ESP32-IP> with your ESP32's IP address
+class SmartAC {
+
+    action(_action: string) {
 
         // JSON data to be sent in the request
         const data = {
-            name: "John",
-            age: 30,
-            hitSwitch: true,
+            action: _action,
         };
 
-        console.log("hello1");
+        this.sendData(data);
+
+
+    }
+
+    private sendData(data: any) {
+        let startTime = performance.now();
+        console.log("start");
         $.ajax({
             url: url,
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(data),
             success: function (jsonResponse) {
-                console.log("hello2");
-                console.log('Response:', jsonResponse);
+                let timeTaken = performance.now() - startTime;
+                console.log(`end, ${timeTaken}`, jsonResponse);
             },
             error: function (error) {
                 console.error('Error:', error);
             }
         });
-
-
     }
 }

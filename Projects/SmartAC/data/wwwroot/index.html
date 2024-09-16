@@ -44,28 +44,22 @@
 <body>
     <div class="container mt-5">
         <div class="d-flex justify-content-center">
-            <button type="button" id="myButton" class="btn btn-primary" onclick="handleClick()">Click Me</button>
+            <button type="button" id="myButton" class="btn btn-primary" onclick="action(this, `hitSwitch`)">Hit
+                Switch</button>
+            &nbsp;
+            <button type="button" id="myButton" class="btn btn-primary" onclick="action(this, `chaos`)">Chaos</button>
         </div>
     </div>
 
     <script>
         let smartAC = new SmartAC();
 
-        const button = document.getElementById('myButton');
-
-        function handleClick() {
-            // Add the 'btn-loading' class to trigger the CSS transition
+        function action(button, _action) {
             button.classList.add('btn-loading');
-            
-            // Call your SmartAC function here
-            
-            smartAC.hello();
-
-            // Simulate some work being done (replace with your actual logic)
+            smartAC.action(_action);
             setTimeout(function () {
-                // Remove the 'btn-loading' class after the delay
                 button.classList.remove('btn-loading');
-            }, 2000); // Simulate a 2-second delay
+            }, 1000);
         }
     </script>
 

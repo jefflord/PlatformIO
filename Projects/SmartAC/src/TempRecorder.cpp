@@ -296,7 +296,11 @@ void TempRecorder::doTemp(void *parameter)
             // safeSerial.print("FLUSH TIME");
             // safeSerial.println(++flushCount);
             //  safeSerial.printf("FLUSH TIME %ld\n", ++flushCount);
-            safeSerial.printf("FLUSH TIME %ld\n", flushCount);
+
+            auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            // printf("Task 'doTemp' high-water mark: %u bytes\n", uxHighWaterMark);
+
+            safeSerial.printf("FLUSH %ld at %s (high water %d)\n", flushCount, ioTHelper->getFormattedTime().c_str(), uxHighWaterMark);
             // safeSerial.println(flushCount);
 
             for (int i = 0; i < sensors.getDeviceCount(); i++)
@@ -315,24 +319,27 @@ void TempRecorder::doTemp(void *parameter)
     }
 }
 
-void doTempX(void *parameter)
-{
+// void doTempX(void *parameter)
+// {
 
-    // TempHelper *me = static_cast<TempHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
-    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
+//     auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//     printf("Task 'doTempX' high-water mark: %u bytes\n", uxHighWaterMark);
 
-    // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(parameter);
+//     // TempHelper *me = static_cast<TempHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
+//     // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(((TaskParamsHolder *)parameter)->sharedObj);
 
-    TempRecorder *th = static_cast<TempRecorder *>(parameter);
-    MyIoTHelper *ioTHelper = th->ioTHelper;
+//     // MyIoTHelper *ioTHelper = static_cast<MyIoTHelper *>(parameter);
 
-    while (true)
-    {
-        safeSerial.print("helper->getTime(): ");
-        safeSerial.println(ioTHelper->_timeLastCheck);
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
-    }
-}
+//     TempRecorder *th = static_cast<TempRecorder *>(parameter);
+//     MyIoTHelper *ioTHelper = th->ioTHelper;
+
+//     while (true)
+//     {
+//         safeSerial.print("helper->getTime(): ");
+//         safeSerial.println(ioTHelper->_timeLastCheck);
+//         vTaskDelay(pdMS_TO_TICKS(1000)); // Convert milliseconds to ticks
+//     }
+// }
 
 // TaskParamsHolder params;
 
@@ -355,7 +362,7 @@ void TempRecorder::begin()
     xTaskCreate(
         doTemp,   // Function to run on the new thread
         "doTemp", // Name of the task (for debugging)
-        8192 * 2, // Stack size (in bytes) // 8192
+        1024 * 5, // Stack size (in bytes) // 8192
         this,     // Parameter passed to the task
         1,        // Priority (0-24, higher number means higher priority)
         NULL      // Handle to the task (not used here)

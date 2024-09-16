@@ -3,6 +3,7 @@
 
 void _showIcon(void *parameter)
 {
+
     DisplayParameters *dp = static_cast<DisplayParameters *>(parameter);
     DisplayUpdater *me = dp->displayUpdater;
     auto gfx = me->gfx;
@@ -50,6 +51,9 @@ void _showIcon(void *parameter)
         vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
     }
 
+    auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+    printf("Task '_showIcon' high-water mark: %u bytes\n", uxHighWaterMark);
+
     vTaskDelete(NULL);
 }
 
@@ -84,7 +88,7 @@ void DisplayUpdater::flashIcon(DisplayParameters *displayParameters)
         displayParameters->taskHandle = NULL;
     }
 
-    xTaskCreate(_showIcon, "showIcon", 2048 * 4, displayParameters, 1, &displayParameters->taskHandle);
+    xTaskCreate(_showIcon, "showIcon", 1024 * 2, displayParameters, 1, &displayParameters->taskHandle);
 
     if (displayParameters->flashDuration > 0)
     {
@@ -117,6 +121,7 @@ void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
 
 void DisplayUpdater::updateDisplay(void *parameter)
 {
+
     DisplayUpdater *me = static_cast<DisplayUpdater *>(parameter);
 
     /**/
@@ -174,6 +179,12 @@ void DisplayUpdater::updateDisplay(void *parameter)
 
         if (timeSinceLast > 5000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
         {
+            auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
+            {
+                printf("Task 'updateDisplay' high-water mark: %u bytes\n", uxHighWaterMark);
+            }
+
             // safeSerial.println("Display update...");
 
             lastUpdateTimeMillis = millis();
@@ -236,13 +247,12 @@ void DisplayUpdater::begin()
 {
 
     xTaskCreate(
-        updateDisplay,   // Function to run on the new thread
-        "updateDisplay", // Name of the task (for debugging)
-        8192 * 2,        // Stack size (in bytes) // 8192
-        this,            // Parameter passed to the task
-        1,               // Priority (0-24, higher number means higher priority)
-        NULL             // Handle to the task (not used here)
-    );
+        updateDisplay,
+        "updateDisplay",
+        512 * 5,
+        this,
+        1,
+        NULL);
 }
 
 DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder)

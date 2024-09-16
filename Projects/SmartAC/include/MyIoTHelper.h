@@ -34,9 +34,7 @@
 #define OLED_SDA 23
 #define OLED_SCL 18
 
-#define TOUCH_PIN 33
-#define LED_ONBOARD 2
-#define SERVO_PIN 32
+
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
