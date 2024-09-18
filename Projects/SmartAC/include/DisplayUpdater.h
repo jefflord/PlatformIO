@@ -6,6 +6,7 @@
 
 struct DisplayParameters;
 
+const TickType_t xDisplayMaxWaitTime = pdMS_TO_TICKS(1000); 
 
 class DisplayUpdater
 {
@@ -24,6 +25,7 @@ public:
     portMUX_TYPE screenLock = portMUX_INITIALIZER_UNLOCKED;
 
     SemaphoreHandle_t mutex;
+    
 
     static void updateDisplay(void *parameter);
 

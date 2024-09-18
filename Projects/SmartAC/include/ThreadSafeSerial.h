@@ -11,58 +11,86 @@ public:
 
     void print(const String &message)
     {
-        serialMutex.lock();
-        Serial.print(message);
-        serialMutex.unlock();
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.print(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.print(message);
+        }
     }
 
     void print(const int message)
     {
-        serialMutex.lock();
-        Serial.print(message);
-        serialMutex.unlock();
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.print(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.print(message);
+        }
     }
 
     void print(const char *message)
     {
-        serialMutex.lock();
-        Serial.print(message);
-        serialMutex.unlock();
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.print(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.print(message);
+        }
     }
 
     void println(const char *message)
     {
-        serialMutex.lock();
-        Serial.println(message);
-        serialMutex.unlock();
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.println(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.println(message);
+        }
     }
 
     void println(const String &message)
     {
-        serialMutex.lock();
-        Serial.println(message);
-        serialMutex.unlock();
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.println(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.println(message);
+        }
     }
 
     void println(long long message)
     {
-        serialMutex.lock();
-        Serial.println(message);
-        serialMutex.unlock();
-    }
-
-    // Note: printf can be more complex to implement thread-safely due to its variable arguments.
-    // This implementation assumes a simple format string with a single argument.
-    void printf_x(const char *format, ...)
-    {
-        va_list args;
-        va_start(args, format);
-
-        serialMutex.lock();
-        Serial.printf(format, args);
-        serialMutex.unlock();
-
-        va_end(args);
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
+        {
+            Serial.println(message);
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
+            Serial.println(message);
+        }
     }
 
     void printf(const char *format, ...)
@@ -74,16 +102,23 @@ public:
         int len = vsnprintf(buffer, sizeof(buffer), format, args);
         va_end(args);
 
-        serialMutex.lock();
-        if (len > 0)
+        if (serialMutex.try_lock_for(std::chrono::milliseconds(100)))
         {
+            if (len > 0)
+            {
+                Serial.write(buffer, len); // Or Serial.print(buffer)
+            }
+            serialMutex.unlock();
+        }
+        else
+        {
+            Serial.print("try_lock_for failed:");
             Serial.write(buffer, len); // Or Serial.print(buffer)
         }
-        serialMutex.unlock();
     }
 
 private:
-    std::mutex serialMutex;
+    std::timed_mutex serialMutex;
 };
 
 extern ThreadSafeSerial safeSerial;

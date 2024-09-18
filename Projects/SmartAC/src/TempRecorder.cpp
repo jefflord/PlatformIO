@@ -93,8 +93,9 @@ void TempRecorder::flushAllDatatoDB()
 
     for (auto &source : storage)
     {
-
+        // safeSerial.printf("start flushDatatoDB %lld\n", source.sourceId);
         flushDatatoDB(source.sourceId);
+        // safeSerial.printf("done! flushDatatoDB %lld\n", source.sourceId);
     }
 
     if (ioTHelper->displayUpdater != NULL)
@@ -247,6 +248,8 @@ void TempRecorder::doTemp(void *parameter)
     DallasTemperature sensors(&oneWire);
     sensors.begin();
 
+    safeSerial.printf("Found %u sensors\n", sensors.getDeviceCount());
+
     auto ioTHelper = me->ioTHelper;
 
     long flushCount = 0;
@@ -268,6 +271,8 @@ void TempRecorder::doTemp(void *parameter)
 
             me->temperatureC[i] = sensors.getTempC(deviceAddress);
             auto time = ioTHelper->getTime();
+            // convert to UTC
+            time += ioTHelper->getUTCOffset() * 1000 * -1;
             auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
 
             // safeSerial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
@@ -297,10 +302,9 @@ void TempRecorder::doTemp(void *parameter)
             // safeSerial.println(++flushCount);
             //  safeSerial.printf("FLUSH TIME %ld\n", ++flushCount);
 
-            auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
             // printf("Task 'doTemp' high-water mark: %u bytes\n", uxHighWaterMark);
 
-            safeSerial.printf("FLUSH %ld at %s (high water %d)\n", flushCount, ioTHelper->getFormattedTime().c_str(), uxHighWaterMark);
+            safeSerial.printf("FLUSH %ld at %s\n", flushCount, ioTHelper->getFormattedTime().c_str());
             // safeSerial.println(flushCount);
 
             for (int i = 0; i < sensors.getDeviceCount(); i++)
@@ -312,7 +316,13 @@ void TempRecorder::doTemp(void *parameter)
                 safeSerial.printf("'%s': %d items\n", sensorId.c_str(), itemCount);
             }
 
+            auto flushStartTime = millis();
             me->flushAllDatatoDB();
+
+            auto flushTime = millis() - flushStartTime;
+
+            auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            safeSerial.printf("FLUSH DONE, (high water %d), took:%ld\n", uxHighWaterMark, flushTime);
         }
 
         vTaskDelay(pdMS_TO_TICKS(ioTHelper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks

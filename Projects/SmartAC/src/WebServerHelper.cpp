@@ -10,14 +10,14 @@ WebServerHelper::WebServerHelper()
 void WebServerHelper::handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
     auto buttonServerHelper = ButtonServerHelper::GetButtonServerHelper();
-    Serial.println("json!");
+    safeSerial.println("json!");
     // Parse incoming JSON
     JsonDocument jsonDoc;
     DeserializationError error = deserializeJson(jsonDoc, data);
 
     if (error)
     {
-        Serial.println("Error parsing JSON");
+        safeSerial.println("Error parsing JSON");
         request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
         return;
     }
@@ -69,6 +69,8 @@ void WebServerHelper::begin()
 {
 
     SPIFFS.begin(true);
+
+    // esp_task_wdt_dump();
 
     server->on("/js/main.js", HTTP_GET, [](AsyncWebServerRequest *request)
                {              

@@ -83,7 +83,7 @@ void setup()
 
   if (touchRead(TOUCH_PIN) < 50)
   {
-    Serial.println("Touch on boot detected");
+    safeSerial.println("Touch on boot detected");
     iotHelper.setSafeBoot();
   }
 

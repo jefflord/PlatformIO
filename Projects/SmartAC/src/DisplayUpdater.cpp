@@ -22,37 +22,62 @@ void _showIcon(void *parameter)
 
         if (dp->flashLeaveOn)
         {
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
-            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-            xSemaphoreGive(me->mutex);
+            if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
+            {
+                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                xSemaphoreGive(me->mutex);
+            }
+            else
+            {
+                safeSerial.println("Failed to get _showIcon");
+            }
         }
         else
         {
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
-            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-            gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
-            xSemaphoreGive(me->mutex);
+            if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
+            {
+                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                xSemaphoreGive(me->mutex);
+            }
+            else
+            {
+                safeSerial.println("Failed to get _showIcon");
+            }
         }
         vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
 
         if (dp->flashLeaveOn)
         {
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
-            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-            gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
-            xSemaphoreGive(me->mutex);
+
+            if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
+            {
+                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                xSemaphoreGive(me->mutex);
+            }
+            else
+            {
+                safeSerial.println("Failed to get _showIcon");
+            }
         }
         else
         {
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
-            gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-            xSemaphoreGive(me->mutex);
+            if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
+            {
+                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                xSemaphoreGive(me->mutex);
+            }
+            else
+            {
+                safeSerial.println("Failed to get _showIcon");
+            }
         }
         vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
     }
 
     auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    printf("Task '_showIcon' high-water mark: %u bytes\n", uxHighWaterMark);
+    safeSerial.printf("Task '_showIcon' high-water mark: %u bytes\n", uxHighWaterMark);
 
     vTaskDelete(NULL);
 }
@@ -70,9 +95,15 @@ void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
         displayParameters->taskHandle = NULL;
     }
 
-    xSemaphoreTake(mutex, portMAX_DELAY);
-    gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-    xSemaphoreGive(mutex);
+    if (xSemaphoreTake(mutex, xDisplayMaxWaitTime) == pdTRUE)
+    {
+        gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+        xSemaphoreGive(mutex);
+    }
+    else
+    {
+        safeSerial.println("Failed to get mutex in hideIcon");
+    }
 }
 
 void DisplayUpdater::flashIcon(DisplayParameters *displayParameters)
@@ -111,12 +142,18 @@ void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
         displayParameters->taskHandle = NULL;
     }
 
-    xSemaphoreTake(mutex, portMAX_DELAY);
-    gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-    // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
-    gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
-    // safeSerial.println("gfx->drawXBitmap2 BBBBB");
-    xSemaphoreGive(mutex);
+    if (xSemaphoreTake(mutex, xDisplayMaxWaitTime) == pdTRUE)
+    {
+        gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+        // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
+        gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
+        // safeSerial.println("gfx->drawXBitmap2 BBBBB");
+        xSemaphoreGive(mutex);
+    }
+    else
+    {
+        safeSerial.println("Failed to get mutex in showIcon");
+    }
 }
 
 void DisplayUpdater::updateDisplay(void *parameter)
@@ -180,9 +217,9 @@ void DisplayUpdater::updateDisplay(void *parameter)
         if (timeSinceLast > 5000 || forceUpdate || lastT1 != temperatureF1 || lastT2 != temperatureF2 || lastT3 != temperatureF3)
         {
             auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
+            if (uxHighWaterMark < 500 || uxHighWaterMark > 1500)
             {
-                printf("Task 'updateDisplay' high-water mark: %u bytes\n", uxHighWaterMark);
+                safeSerial.printf("Task 'updateDisplay' high-water mark: %u bytes\n", uxHighWaterMark);
             }
 
             // safeSerial.println("Display update...");
@@ -206,37 +243,43 @@ void DisplayUpdater::updateDisplay(void *parameter)
                 me->hideIcon(&networkDpParms);
             }
 
-            xSemaphoreTake(me->mutex, portMAX_DELAY);
+            if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
+            {
 
-            gfx->setTextColor(WHITE);
+                gfx->setTextColor(WHITE);
 
-            gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
-            gfx->setCursor(0, SET_CUR_TOP_Y + 16);
-            gfx->println(me->ioTHelper->getFormattedTime());
+                gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
+                gfx->setCursor(0, SET_CUR_TOP_Y + 16);
+                gfx->println(me->ioTHelper->getFormattedTime());
 
-            gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
+                gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
-            char bufferForNumber[20];
+                char bufferForNumber[20];
 
-            gfx->setTextColor(BLUE);
-            sprintf(bufferForNumber, "%2.0f", temperatureF1);
-            gfx->print(bufferForNumber);
-            gfx->setTextSize(FONT_SIZE);
+                gfx->setTextColor(BLUE);
+                sprintf(bufferForNumber, "%2.0f", temperatureF1);
+                gfx->print(bufferForNumber);
+                gfx->setTextSize(FONT_SIZE);
 
-            auto y = gfx->getCursorY();
-            gfx->setCursor(gfx->getCursorX() + 12, y);
-            gfx->setTextColor(RED);
-            sprintf(bufferForNumber, "%2.0f", temperatureF2);
-            gfx->print(bufferForNumber);
-            gfx->setTextSize(FONT_SIZE);
+                auto y = gfx->getCursorY();
+                gfx->setCursor(gfx->getCursorX() + 12, y);
+                gfx->setTextColor(RED);
+                sprintf(bufferForNumber, "%2.0f", temperatureF2);
+                gfx->print(bufferForNumber);
+                gfx->setTextSize(FONT_SIZE);
 
-            gfx->setCursor(gfx->getCursorX() + 12, y);
-            gfx->setTextColor(GREEN);
-            sprintf(bufferForNumber, "%2.0f", temperatureF3);
-            gfx->print(bufferForNumber);
-            gfx->setTextSize(FONT_SIZE);
+                gfx->setCursor(gfx->getCursorX() + 12, y);
+                gfx->setTextColor(GREEN);
+                sprintf(bufferForNumber, "%2.0f", temperatureF3);
+                gfx->print(bufferForNumber);
+                gfx->setTextSize(FONT_SIZE);
 
-            xSemaphoreGive(me->mutex);
+                xSemaphoreGive(me->mutex);
+            }
+            else
+            {
+                safeSerial.println("Failed to get mutex");
+            }
         }
 
         vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS);

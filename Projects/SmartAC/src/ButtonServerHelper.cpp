@@ -68,7 +68,7 @@ void ButtonServerHelper::pushServoButtonX(void *pvParameters)
     safeSerial.println("pushServoButtonX D");
 
     UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    printf("Task 'pushServoButtonX' high-water mark: %u bytes\n", uxHighWaterMark);
+    safeSerial.printf("Task 'pushServoButtonX' high-water mark: %u bytes\n", uxHighWaterMark);
 
     vTaskDelete(NULL);
 }
@@ -89,7 +89,7 @@ void ButtonServerHelper::pushServoButton()
         if (buttonServerHelper->okToGo)
         {
 
-            safeSerial.println("okToGo 1");
+            safeSerial.printf("okToGo 1");
             buttonServerHelper->iotHelper->chaos("wifi");
             safeSerial.println("okToGo 2");
             vTaskDelay(pdMS_TO_TICKS(2000));
@@ -106,6 +106,6 @@ void ButtonServerHelper::pushServoButton()
     }
     else
     {
-        safeSerial.println("servoMoving already true");
+        // safeSerial.println("servoMoving already true");
     }
 }

@@ -95,6 +95,7 @@ public:
 
     String getFormattedTime();
     int64_t getTime();
+    long getUTCOffset();
 
     Preferences preferences;
 
@@ -123,6 +124,8 @@ public:
     DisplayUpdater *displayUpdater;
 
     bool x_resetWifi = false;
+
+    std::timed_mutex getTimeRefreshMutex;
 
 private:
     // WiFiManager *wifiManager;

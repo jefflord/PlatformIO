@@ -51,7 +51,11 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "mutex": "cpp",
+        "bitset": "cpp",
+        "condition_variable": "cpp",
+        "thread": "cpp"
     },
     "idf.portWin": "COM3"
 }

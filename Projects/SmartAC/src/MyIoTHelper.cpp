@@ -21,7 +21,7 @@ static void resetWifiTask(void *pvParameter)
             auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
             if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
             {
-                printf("Task 'resetWifiTask' high-water mark: %u bytes\n", uxHighWaterMark);
+                safeSerial.printf("Task 'resetWifiTask' high-water mark: %u bytes\n", uxHighWaterMark);
             }
 
             safeSerial.println("killing wifi b");
@@ -277,13 +277,13 @@ void MyIoTHelper::updateConfig()
                 auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
                 if (uxHighWaterMark < 800 || uxHighWaterMark > 1800)
                 {
-                    printf("Task 'internalUpdateConfig' high-water mark: %u bytes\n", uxHighWaterMark);
+                    safeSerial.printf("Task 'internalUpdateConfig' high-water mark: %u bytes\n", uxHighWaterMark);
                 }
 
                 vTaskDelete(NULL);
             },                      // Function to run on the new thread
             "internalUpdateConfig", // Name of the task (for debugging)
-            1024 * 4,               // Stack size (in bytes)
+            1024 * 5,               // Stack size (in bytes)
             params,                 // Parameter passed to the task
             1,                      // Priority (0-24, higher number means higher priority)
             NULL                    // Handle to the task (not used here)
@@ -469,6 +469,11 @@ void MyIoTHelper::Setup()
 
 // auto getTimeCount = 0;
 
+long MyIoTHelper::getUTCOffset()
+{
+    return -4 * 60 * 60;
+}
+
 int64_t MyIoTHelper::getTime()
 {
 
@@ -495,7 +500,7 @@ int64_t MyIoTHelper::getTime()
         safeSerial.printf("time guess %d,  %lld vs %lld\n", timeGuesses, lastNTPTime, testNTPTime);
     }
 
-    if (millis() - getTimeLastCheck() > 5 * 60 * 1000)
+    if (millis() - getTimeLastCheck() > 1 * 60 * 1000)
     {
 
         xTaskCreate(
@@ -503,42 +508,56 @@ int64_t MyIoTHelper::getTime()
             {
                 MyIoTHelper *me = static_cast<MyIoTHelper *>(parameter);
 
-                try
+                if (me->getTimeRefreshMutex.try_lock_for(std::chrono::milliseconds(1)))
                 {
-                    me->timeClientOk = false;
-                    if (WiFi.status() != WL_CONNECTED)
+                    // safeSerial.println("Got the getTimeRefreshMutex");
+                    try
                     {
-                        me->wiFiBegin();
-                    }
-                    else
-                    {
-                        delete me->timeClient;
-                        WiFiUDP ntpUDP;
-                        me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
-                        me->timeClient->begin();
-                        auto updated = me->timeClient->update();
-
-                        if (updated)
+                        safeSerial.println("getTimeChild");
+                        me->timeClientOk = false;
+                        if (WiFi.status() != WL_CONNECTED)
                         {
-                            me->timeClientOk = true;
+                            me->wiFiBegin();
                         }
-                        // safeSerial.printf("getTime updated %s\n", updated ? "true" : "false");
+                        else
+                        {
+                            delete me->timeClient;
+                            WiFiUDP ntpUDP;
+                            me->timeClient = new NTPClient(ntpUDP, "pool.ntp.org", me->getUTCOffset(), 60 * 60 * 1000);
+                            me->timeClient->begin();
+                            safeSerial.println("me->timeClient->update() 111");
+                            auto updated = me->timeClient->update();
+                            safeSerial.println("me->timeClient->update() 222");
+
+                            if (updated)
+                            {
+                                me->timeClientOk = true;
+                            }
+                            // safeSerial.printf("getTime updated %s\n", updated ? "true" : "false");
+                        }
+                        me->setTimeLastCheck(millis());
                     }
-                    me->setTimeLastCheck(millis());
+                    catch (const std::exception &e)
+                    {
+                        safeSerial.println("e.what()!!!");
+                        safeSerial.println(e.what());
+                    }
+
+                    // safeSerial.println("Got the getTimeRefreshMutex UNLOCK");
+                    me->getTimeRefreshMutex.unlock();
                 }
-                catch (const std::exception &e)
+                else
                 {
-                    safeSerial.println("e.what()!!!");
-                    safeSerial.println(e.what());
+                    safeSerial.println("### Didn't get the getTimeRefreshMutex ###");
                 }
 
                 auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-                printf("Task 'getTimeChild' high-water mark: %u bytes\n", uxHighWaterMark);
+                safeSerial.printf("Task 'getTimeChild' high-water mark: %u bytes\n", uxHighWaterMark);
 
                 vTaskDelete(NULL);
             },
             "getTimeChild",
-            1024,
+            512 * 10,
             this,
             1,
             NULL);
@@ -572,17 +591,12 @@ String MyIoTHelper::getFormattedTime()
 
 int64_t MyIoTHelper::getTimeLastCheck()
 {
-    xSemaphoreTake(mutex, portMAX_DELAY);
-    auto x = _timeLastCheck;
-    xSemaphoreGive(mutex);
-    return x;
+    return _timeLastCheck;
 }
 
 void MyIoTHelper::setTimeLastCheck(int64_t value)
 {
-    xSemaphoreTake(mutex, portMAX_DELAY);
     _timeLastCheck = value;
-    xSemaphoreGive(mutex);
 }
 
 // void configModeCallback(WiFiManager *myWiFiManager)
@@ -637,7 +651,7 @@ void MyIoTHelper::wiFiBegin()
     // Wait for connection
     int timeout = 20000; // Timeout after 10 seconds
     int elapsed = 0;
-    Serial.println("\nStarting WiFi...");
+    safeSerial.println("\nStarting WiFi...");
 
     // flash
     DisplayParameters params2 = {-1, 500, false, epd_bitmap_icons8_wifi_13, 80, 0, NULL};
@@ -649,7 +663,7 @@ void MyIoTHelper::wiFiBegin()
     while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
     {
         delay(500);
-        Serial.print("O");
+        safeSerial.print("O");
         elapsed += 500;
     }
 
@@ -667,17 +681,17 @@ void MyIoTHelper::wiFiBegin()
             displayUpdater->flashIcon(&params2);
         }
 
-        Serial.println("\nStarting SmartConfig...");
+        safeSerial.println("\nStarting SmartConfig...");
         WiFi.beginSmartConfig();
 
         // Wait for SmartConfig to finish
         while (!WiFi.smartConfigDone())
         {
             delay(500);
-            Serial.print("X");
+            safeSerial.print("X");
         }
 
-        Serial.println("\nSmartConfig done.");
+        safeSerial.println("\nSmartConfig done.");
         // Serial.printf("Connected to WiFi: %s\n", WiFi.SSID().c_str());
     }
     else
@@ -700,7 +714,7 @@ void MyIoTHelper::wiFiBegin()
     }
 
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
-    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", getUTCOffset(), 60 * 60 * 1000);
     timeClient->begin();
 
     try
@@ -764,7 +778,7 @@ wl_status_t MyIoTHelper::___wiFiBegin(const String &ssid, const String &passphra
     }
 
     // NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000 * 15); // Time offset in seconds and update interval
-    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", -4 * 60 * 60, 60 * 60 * 1000);
+    timeClient = new NTPClient(ntpUDP, "pool.ntp.org", getUTCOffset(), 60 * 60 * 1000);
     timeClient->begin();
 
     try
