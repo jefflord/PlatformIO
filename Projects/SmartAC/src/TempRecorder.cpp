@@ -258,7 +258,8 @@ void TempRecorder::doTemp(void *parameter)
         auto currentMillis = millis();
         sensors.requestTemperatures();
 
-        for (int i = 0; i < sensors.getDeviceCount(); i++)
+        int deviceCount = sensors.getDeviceCount(); // Call once
+        for (int i = 0; i < deviceCount; i++)
         {
             DeviceAddress deviceAddress;
             sensors.getAddress(deviceAddress, i);
@@ -280,18 +281,6 @@ void TempRecorder::doTemp(void *parameter)
             // safeSerial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
         }
 
-        // if (false)
-        // {
-        //   safeSerial.print(temperatureC);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(temperatureF);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(time);
-        //   safeSerial.print(" -- ");
-        //   safeSerial.print(itemCount);
-        //   safeSerial.println();
-        // }
-
         if (currentMillis - me->previousTempFlushMillis >= (ioTHelper->tempFlushIntevalSec * 1000))
         {
 
@@ -307,7 +296,8 @@ void TempRecorder::doTemp(void *parameter)
             safeSerial.printf("FLUSH %ld at %s\n", flushCount, ioTHelper->getFormattedTime().c_str());
             // safeSerial.println(flushCount);
 
-            for (int i = 0; i < sensors.getDeviceCount(); i++)
+            auto deviceCount = sensors.getDeviceCount();
+            for (int i = 0; i < deviceCount; i++)
             {
                 DeviceAddress deviceAddress;
                 sensors.getAddress(deviceAddress, i);
@@ -322,10 +312,25 @@ void TempRecorder::doTemp(void *parameter)
             auto flushTime = millis() - flushStartTime;
 
             auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            safeSerial.printf("FLUSH DONE, (high water %d), took:%ld\n", uxHighWaterMark, flushTime);
+            auto uptimeMin = (millis() / 1000.0 / 60.0);
+            safeSerial.printf("FLUSH DONE, (high water %d), took:%ld, uptime min:%.2f\n", uxHighWaterMark, flushTime, uptimeMin);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(ioTHelper->tempReadIntevalSec * 1000)); // Convert milliseconds to ticks
+        auto timeTaken = millis() - currentMillis;
+        auto delayTime = (ioTHelper->tempReadIntevalSec * 1000) - (long long)timeTaken;
+
+        // safeSerial.printf("timeTaken: %ld, currentMillis: %ld, delayTime: %lld\n", timeTaken, currentMillis, delayTime);
+        //  safeSerial.println(delayTime);
+
+        if (delayTime > 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(delayTime));
+        }
+        else
+        {
+            // safeSerial.println(delayTime);
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
     }
 }
 
@@ -372,7 +377,7 @@ void TempRecorder::begin()
     xTaskCreate(
         doTemp,   // Function to run on the new thread
         "doTemp", // Name of the task (for debugging)
-        1024 * 5, // Stack size (in bytes) // 8192
+        1024 * 8, // Stack size (in bytes) // 8192
         this,     // Parameter passed to the task
         1,        // Priority (0-24, higher number means higher priority)
         NULL      // Handle to the task (not used here)

@@ -4,6 +4,8 @@
 void _showIcon(void *parameter)
 {
 
+    // const EventBits_t stopBit = (1 << 0); // Define the stop bit
+
     DisplayParameters *dp = static_cast<DisplayParameters *>(parameter);
     DisplayUpdater *me = dp->displayUpdater;
     auto gfx = me->gfx;
@@ -24,7 +26,13 @@ void _showIcon(void *parameter)
         {
             if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
             {
-                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                try
+                {
+                    gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                }
+                catch (...)
+                {
+                }
                 xSemaphoreGive(me->mutex);
             }
             else
@@ -36,8 +44,14 @@ void _showIcon(void *parameter)
         {
             if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
             {
-                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-                gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                try
+                {
+                    gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                    gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                }
+                catch (...)
+                {
+                }
                 xSemaphoreGive(me->mutex);
             }
             else
@@ -45,15 +59,37 @@ void _showIcon(void *parameter)
                 safeSerial.println("Failed to get _showIcon");
             }
         }
-        vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
+
+        uint32_t ulNotificationValue = 0;
+        BaseType_t xResult = xTaskNotifyWait(
+            0x00,                            // Don't clear any notification bits on entry
+            ULONG_MAX,                       // Clear all bits on exit
+            &ulNotificationValue,            // Receives the notification value
+            pdMS_TO_TICKS(dp->flashInterval) // Wait time (optional, can use portMAX_DELAY for indefinite wait)
+        );
+
+        if (xResult == pdPASS)
+        {
+            if (ulNotificationValue == 1)
+            {
+                // safeSerial.println("Stop called!!!! A");
+                break;
+            }
+        }
 
         if (dp->flashLeaveOn)
         {
 
             if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
             {
-                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
-                gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                try
+                {
+                    gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                    gfx->drawXBitmap(dp->x, dp->y, dp->icon, 13, 13, WHITE);
+                }
+                catch (...)
+                {
+                }
                 xSemaphoreGive(me->mutex);
             }
             else
@@ -65,7 +101,13 @@ void _showIcon(void *parameter)
         {
             if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
             {
-                gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                try
+                {
+                    gfx->fillRect(dp->x, dp->y, 13, 13, BLACK);
+                }
+                catch (...)
+                {
+                }
                 xSemaphoreGive(me->mutex);
             }
             else
@@ -73,11 +115,32 @@ void _showIcon(void *parameter)
                 safeSerial.println("Failed to get _showIcon");
             }
         }
-        vTaskDelay(dp->flashInterval / portTICK_PERIOD_MS);
+
+        ulNotificationValue = 0;
+        xResult = xTaskNotifyWait(
+            0x00,                            // Don't clear any notification bits on entry
+            ULONG_MAX,                       // Clear all bits on exit
+            &ulNotificationValue,            // Receives the notification value
+            pdMS_TO_TICKS(dp->flashInterval) // Wait time (optional, can use portMAX_DELAY for indefinite wait)
+        );
+
+        if (xResult == pdPASS)
+        {
+            if (ulNotificationValue == 1)
+            {
+                // safeSerial.println("Stop called!!!! B");
+                break;
+            }
+        }
     }
 
+    // safeSerial.println("Stop called!!!! aaa");
     auto uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    safeSerial.printf("Task '_showIcon' high-water mark: %u bytes\n", uxHighWaterMark);
+    if (uxHighWaterMark < 1000 || uxHighWaterMark > 2000)
+    {
+        safeSerial.printf("Task '_showIcon' high-water mark: %u bytes\n", uxHighWaterMark);
+    }
+    // safeSerial.println("Stop called!!!! bbbb");
 
     vTaskDelete(NULL);
 }
@@ -91,13 +154,20 @@ void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
     if (displayParameters->taskHandle != NULL)
     {
         // stop the flashing task
-        vTaskDelete(displayParameters->taskHandle);
+        xTaskNotify(displayParameters->taskHandle, 1, eSetValueWithOverwrite); // Send stop signal
+
         displayParameters->taskHandle = NULL;
     }
 
     if (xSemaphoreTake(mutex, xDisplayMaxWaitTime) == pdTRUE)
     {
-        gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+        try
+        {
+            gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+        }
+        catch (...)
+        {
+        }
         xSemaphoreGive(mutex);
     }
     else
@@ -115,7 +185,7 @@ void DisplayUpdater::flashIcon(DisplayParameters *displayParameters)
     {
         // safeSerial.println("Y");
         //  stop the flashing task
-        vTaskDelete(displayParameters->taskHandle);
+        xTaskNotify(displayParameters->taskHandle, 1, eSetValueWithOverwrite); // Send stop signal
         displayParameters->taskHandle = NULL;
     }
 
@@ -138,16 +208,22 @@ void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
     if (displayParameters->taskHandle != NULL)
     {
         // stop the flashing task
-        vTaskDelete(displayParameters->taskHandle);
+        // safeSerial.println("Killing flash");
+        xTaskNotify(displayParameters->taskHandle, 1, eSetValueWithOverwrite); // Send stop signal
         displayParameters->taskHandle = NULL;
+        // safeSerial.println("done killing flash");
     }
 
     if (xSemaphoreTake(mutex, xDisplayMaxWaitTime) == pdTRUE)
     {
-        gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
-        // safeSerial.println("gfx->drawXBitmap1 BBBBBB");
-        gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
-        // safeSerial.println("gfx->drawXBitmap2 BBBBB");
+        try
+        {
+            gfx->fillRect(displayParameters->x, displayParameters->y, 13, 13, BLACK);
+            gfx->drawXBitmap(displayParameters->x, displayParameters->y, displayParameters->icon, 13, 13, WHITE);
+        }
+        catch (...)
+        {
+        }
         xSemaphoreGive(mutex);
     }
     else
@@ -246,34 +322,40 @@ void DisplayUpdater::updateDisplay(void *parameter)
             if (xSemaphoreTake(me->mutex, xDisplayMaxWaitTime) == pdTRUE)
             {
 
-                gfx->setTextColor(WHITE);
+                try
+                {
 
-                gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
-                gfx->setCursor(0, SET_CUR_TOP_Y + 16);
-                gfx->println(me->ioTHelper->getFormattedTime());
+                    gfx->setTextColor(WHITE);
 
-                gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
+                    gfx->fillRect(0, SET_CUR_TOP_Y + 16, 96, 64, BLACK);
+                    gfx->setCursor(0, SET_CUR_TOP_Y + 16);
+                    gfx->println(me->ioTHelper->getFormattedTime());
 
-                char bufferForNumber[20];
+                    gfx->setCursor(gfx->getCursorX(), gfx->getCursorY() + 6);
 
-                gfx->setTextColor(BLUE);
-                sprintf(bufferForNumber, "%2.0f", temperatureF1);
-                gfx->print(bufferForNumber);
-                gfx->setTextSize(FONT_SIZE);
+                    char bufferForNumber[20];
 
-                auto y = gfx->getCursorY();
-                gfx->setCursor(gfx->getCursorX() + 12, y);
-                gfx->setTextColor(RED);
-                sprintf(bufferForNumber, "%2.0f", temperatureF2);
-                gfx->print(bufferForNumber);
-                gfx->setTextSize(FONT_SIZE);
+                    gfx->setTextColor(BLUE);
+                    sprintf(bufferForNumber, "%2.0f", temperatureF1);
+                    gfx->print(bufferForNumber);
+                    gfx->setTextSize(FONT_SIZE);
 
-                gfx->setCursor(gfx->getCursorX() + 12, y);
-                gfx->setTextColor(GREEN);
-                sprintf(bufferForNumber, "%2.0f", temperatureF3);
-                gfx->print(bufferForNumber);
-                gfx->setTextSize(FONT_SIZE);
+                    auto y = gfx->getCursorY();
+                    gfx->setCursor(gfx->getCursorX() + 12, y);
+                    gfx->setTextColor(RED);
+                    sprintf(bufferForNumber, "%2.0f", temperatureF2);
+                    gfx->print(bufferForNumber);
+                    gfx->setTextSize(FONT_SIZE);
 
+                    gfx->setCursor(gfx->getCursorX() + 12, y);
+                    gfx->setTextColor(GREEN);
+                    sprintf(bufferForNumber, "%2.0f", temperatureF3);
+                    gfx->print(bufferForNumber);
+                    gfx->setTextSize(FONT_SIZE);
+                }
+                catch (...)
+                {
+                }
                 xSemaphoreGive(me->mutex);
             }
             else

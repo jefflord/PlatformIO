@@ -70,7 +70,7 @@ public:
     // Public members (accessible from anywhere)
     MyIoTHelper(const String &name);
     ~MyIoTHelper(); // Destructor
-    void updateConfig();
+    void updateConfig();    
     void chaos(const String &mode);
 
     void Setup();
@@ -126,6 +126,8 @@ public:
     bool x_resetWifi = false;
 
     std::timed_mutex getTimeRefreshMutex;
+    std::timed_mutex updateConfigMutex;
+    
 
 private:
     // WiFiManager *wifiManager;

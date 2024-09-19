@@ -88,11 +88,9 @@ void ButtonServerHelper::pushServoButton()
         // we only want to do this one per, so we use okToGo
         if (buttonServerHelper->okToGo)
         {
-
             safeSerial.printf("okToGo 1");
             buttonServerHelper->iotHelper->chaos("wifi");
-            safeSerial.println("okToGo 2");
-            vTaskDelay(pdMS_TO_TICKS(2000));
+            safeSerial.println("okToGo 2");            
             safeSerial.println("okToGo 3");
             buttonServerHelper->iotHelper->updateConfig();
             safeSerial.println("okToGo 4");

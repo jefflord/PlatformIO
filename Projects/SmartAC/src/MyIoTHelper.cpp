@@ -88,6 +88,7 @@ String byteArrayToHexString(const uint8_t *byteArray, size_t length)
 void MyIoTHelper::regDevice()
 {
 
+    // safeSerial.println("regDevice starting");
     JsonDocument doc;
 
     const esp_app_desc_t *appDescription = esp_ota_get_app_description();
@@ -151,8 +152,6 @@ void MyIoTHelper::regDevice()
 int64_t MyIoTHelper::getSourceId(String name)
 {
 
-    regDevice();
-
     std::string key = name.c_str();
 
     auto it = sourceIdCache.find(key);
@@ -164,6 +163,7 @@ int64_t MyIoTHelper::getSourceId(String name)
     else
     {
         // safeSerial.println("getSourceId NOT cached!");
+        regDevice();
     }
 
     lastConfigUpdateTime = std::chrono::steady_clock::now();
@@ -312,84 +312,95 @@ void MyIoTHelper::chaos(const String &mode)
 void MyIoTHelper::internalUpdateConfig()
 {
 
-    // safeSerial.println("internalUpdateConfig");
-
-    lastConfigUpdateTime = std::chrono::steady_clock::now();
-    configHasBeenDownloaded = true;
-
-    JsonDocument doc;
-
-    // Populate the JSON document
-    doc["headers"]["Authorization"] = "letmein";
-    doc["queryStringParameters"]["action"] = "getConfig";
-    doc["queryStringParameters"]["configName"] = configName;
-    doc["httpMethod"] = "POST";
-
-    // Serialize JSON to a String
-    String jsonPayload;
-    serializeJson(doc, jsonPayload);
-
-    // Print the JSON payload to the Serial Monitor
-    // safeSerial.println("getConfig Payload:");
-    // safeSerial.println(jsonPayload);
-
-    String payload = "";
-
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        wiFiBegin();
-    }
-
-    if (WiFi.status() == WL_CONNECTED)
+    if (updateConfigMutex.try_lock_for(std::chrono::milliseconds(1)))
     {
 
-        HTTPClient http;
-        http.begin(url);
+        safeSerial.println("internalUpdateConfig");
 
-        int httpCode = http.POST(jsonPayload);
-
-        String response = "";
-        if (httpCode == HTTP_CODE_OK)
-        {
-            response = http.getString();
-            http.end();
-        }
-        else
-        {
-            safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
-            http.end();
-            return;
-        }
+        lastConfigUpdateTime = std::chrono::steady_clock::now();
+        configHasBeenDownloaded = true;
 
         JsonDocument doc;
 
-        DeserializationError error = deserializeJson(doc, response);
-        if (error)
+        // Populate the JSON document
+        doc["headers"]["Authorization"] = "letmein";
+        doc["queryStringParameters"]["action"] = "getConfig";
+        doc["queryStringParameters"]["configName"] = configName;
+        doc["httpMethod"] = "POST";
+
+        // Serialize JSON to a String
+        String jsonPayload;
+        serializeJson(doc, jsonPayload);
+
+        // Print the JSON payload to the Serial Monitor
+        // safeSerial.println("getConfig Payload:");
+        // safeSerial.println(jsonPayload);
+
+        String payload = "";
+
+        if (WiFi.status() != WL_CONNECTED)
         {
-            safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
+            wiFiBegin();
+        }
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
+
+            HTTPClient http;
+            http.begin(url);
+
+            int httpCode = http.POST(jsonPayload);
+
+            String response = "";
+            if (httpCode == HTTP_CODE_OK)
+            {
+                response = http.getString();
+                http.end();
+            }
+            else
+            {
+                safeSerial.printf("HTTP POST failed, error: %s\n", http.errorToString(httpCode).c_str());
+                http.end();
+                updateConfigMutex.unlock();
+                return;
+            }
+
+            JsonDocument doc;
+
+            DeserializationError error = deserializeJson(doc, response);
+            if (error)
+            {
+                safeSerial.printf("Failed to parse JSON: %s\n", error.c_str());
+            }
+            else
+            {
+
+                String body = doc["body"];
+
+                // safeSerial.print("body:");
+                // safeSerial.println(body);
+
+                parseConfig(body);
+                preferences.begin("MyIoTHelper", false);
+                auto lastBody = preferences.getString("config", "");
+                if (lastBody != body)
+                {
+                    preferences.putString("config", body);
+                }
+
+                preferences.end();
+            }
         }
         else
         {
-
-            String body = doc["body"];
-
-            // safeSerial.print("body:");
-            // safeSerial.println(body);
-
-            parseConfig(body);
-            preferences.begin("MyIoTHelper", false);
-            auto lastBody = preferences.getString("config", "");
-            if (lastBody != body)
-            {
-                preferences.putString("config", body);
-            }
-
-            preferences.end();
+            safeSerial.println("Wi-Fi not connected");
         }
+
+        updateConfigMutex.unlock();
     }
     else
     {
-        safeSerial.println("Wi-Fi not connected");
+        safeSerial.println("failed to get updateConfigMutex");
     }
 }
 
@@ -497,10 +508,17 @@ int64_t MyIoTHelper::getTime()
         lastNTPTime = lastNTPTime + (millis() - lastNTPCheckTimeMs);
         lastNTPCheckTimeMs = millis();
         auto testNTPTime = ((int64_t)timeClient->getEpochTime() * 1000);
-        safeSerial.printf("time guess %d,  %lld vs %lld\n", timeGuesses, lastNTPTime, testNTPTime);
+
+        struct tm *timeinfo;
+        char timeStringBuff[12];
+        auto lastNTPTimeX = lastNTPTime / 1000;
+        timeinfo = localtime((time_t *)&lastNTPTimeX);
+        strftime(timeStringBuff, sizeof(timeStringBuff), "%I:%M %p", timeinfo);
+
+        safeSerial.printf("time guess %d,  %lld (%s) vs %lld\n", timeGuesses, lastNTPTime, timeStringBuff, testNTPTime);
     }
 
-    if (millis() - getTimeLastCheck() > 1 * 60 * 1000)
+    if (millis() - getTimeLastCheck() > 10 * 60 * 1000)
     {
 
         xTaskCreate(
@@ -662,9 +680,9 @@ void MyIoTHelper::wiFiBegin()
 
     while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
     {
-        delay(500);
+        delay(1000);
         safeSerial.print("O");
-        elapsed += 500;
+        elapsed += 1000;
     }
 
     if (displayUpdater != NULL)
@@ -684,11 +702,21 @@ void MyIoTHelper::wiFiBegin()
         safeSerial.println("\nStarting SmartConfig...");
         WiFi.beginSmartConfig();
 
+        timeout = 2 * 60 * 1000;
+        elapsed = 0;
+
         // Wait for SmartConfig to finish
-        while (!WiFi.smartConfigDone())
+        while (!WiFi.smartConfigDone() && elapsed < timeout)
         {
-            delay(500);
+            delay(1000);
             safeSerial.print("X");
+            elapsed += 1000;
+        }
+
+        if (!WiFi.smartConfigDone())
+        {
+            safeSerial.println("smartConfigDone failed, rebooting.");
+            ESP.restart();
         }
 
         safeSerial.println("\nSmartConfig done.");
