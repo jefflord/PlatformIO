@@ -41,7 +41,7 @@ void ButtonServerHelper::pushServoButtonX(void *pvParameters)
     ButtonServerHelper *buttonServerHelper = static_cast<ButtonServerHelper *>(pvParameters);
     MyIoTHelper *iotHelper = buttonServerHelper->iotHelper;
 
-    safeSerial.println("pushServoButtonX A");
+    safeSerial.println("pushServoButtonX");
     buttonServerHelper->servoMoving = true;
 
     buttonServerHelper->actuationCounter++;
@@ -51,7 +51,7 @@ void ButtonServerHelper::pushServoButtonX(void *pvParameters)
     DisplayParameters params = {-1, 250, false, epd_bitmap_icons8_natural_user_interface_2_13, 0, 0, NULL};
     buttonServerHelper->displayUpdater->flashIcon(&params);
 
-    safeSerial.println("pushServoButtonX B");
+    // safeSerial.println("pushServoButtonX B");
 
     digitalWrite(LED_ONBOARD, HIGH);
     buttonServerHelper->myServo.write(iotHelper->servoAngle);
@@ -59,13 +59,13 @@ void ButtonServerHelper::pushServoButtonX(void *pvParameters)
     buttonServerHelper->myServo.write(iotHelper->servoHomeAngle);
     digitalWrite(LED_ONBOARD, LOW);
 
-    safeSerial.println("pushServoButtonX C");
+    // safeSerial.println("pushServoButtonX C");
 
     buttonServerHelper->displayUpdater->hideIcon(&params);
 
     buttonServerHelper->servoMoving = false;
 
-    safeSerial.println("pushServoButtonX D");
+    // safeSerial.println("pushServoButtonX D");
 
     UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     safeSerial.printf("Task 'pushServoButtonX' high-water mark: %u bytes\n", uxHighWaterMark);
@@ -75,6 +75,7 @@ void ButtonServerHelper::pushServoButtonX(void *pvParameters)
 
 void ButtonServerHelper::pushServoButton()
 {
+
     auto buttonServerHelper = ButtonServerHelper::GetButtonServerHelper();
 
     // record each time we are touched
@@ -89,9 +90,9 @@ void ButtonServerHelper::pushServoButton()
         if (buttonServerHelper->okToGo)
         {
             safeSerial.printf("okToGo 1");
-            buttonServerHelper->iotHelper->chaos("wifi");
-            safeSerial.println("okToGo 2");            
-            safeSerial.println("okToGo 3");
+            // buttonServerHelper->iotHelper->chaos("wifi");
+
+            buttonServerHelper->iotHelper->configHasBeenDownloaded = false;
             buttonServerHelper->iotHelper->updateConfig();
             safeSerial.println("okToGo 4");
             buttonServerHelper->okToGo = false;

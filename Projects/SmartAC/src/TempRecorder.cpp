@@ -248,7 +248,16 @@ void TempRecorder::doTemp(void *parameter)
     DallasTemperature sensors(&oneWire);
     sensors.begin();
 
-    safeSerial.printf("Found %u sensors\n", sensors.getDeviceCount());
+    auto sensorCount = sensors.getDeviceCount();
+
+    if (sensorCount <= 0)
+    {
+        safeSerial.println("No temp sensors!!!!!!!!!!!!!!");
+    }
+    else
+    {
+        safeSerial.printf("Found %u sensors\n", sensorCount);
+    }
 
     auto ioTHelper = me->ioTHelper;
 

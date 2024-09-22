@@ -312,7 +312,7 @@ void MyIoTHelper::chaos(const String &mode)
 void MyIoTHelper::internalUpdateConfig()
 {
 
-    if (updateConfigMutex.try_lock_for(std::chrono::milliseconds(1)))
+    if (updateConfigMutex.try_lock_for(std::chrono::milliseconds(100)))
     {
 
         safeSerial.println("internalUpdateConfig");
@@ -425,7 +425,7 @@ void MyIoTHelper::parseConfig(const String &config)
         servoAngle = bodyDoc["servoAngle"];
         servoHomeAngle = bodyDoc["servoHomeAngle"];
 
-        if (false)
+        if (true)
         {
             safeSerial.println("######## parseConfig ########");
             safeSerial.printf("\t pressDownHoldTime: %d\n", pressDownHoldTime);

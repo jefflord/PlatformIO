@@ -34,8 +34,6 @@
 #define OLED_SDA 23
 #define OLED_SCL 18
 
-
-
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
 // // Define a pair structure to hold data points
@@ -70,7 +68,7 @@ public:
     // Public members (accessible from anywhere)
     MyIoTHelper(const String &name);
     ~MyIoTHelper(); // Destructor
-    void updateConfig();    
+    void updateConfig();
     void chaos(const String &mode);
 
     void Setup();
@@ -127,7 +125,7 @@ public:
 
     std::timed_mutex getTimeRefreshMutex;
     std::timed_mutex updateConfigMutex;
-    
+    bool configHasBeenDownloaded = false;
 
 private:
     // WiFiManager *wifiManager;
@@ -138,7 +136,7 @@ private:
     NTPClient *timeClient = NULL;
 
     bool safeBoot = false;
-    
+
     bool timeClientOk = false;
 
     void setTimeLastCheck(int64_t value);
@@ -153,7 +151,6 @@ private:
     unsigned long lastNTPReadMillis = 0; // millis() at the time of the last NTP update
 
     // Private members (accessible only within the class)
-    bool configHasBeenDownloaded = false;
 
     void internalUpdateConfig();
 

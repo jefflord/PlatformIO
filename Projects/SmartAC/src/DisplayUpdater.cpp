@@ -10,6 +10,12 @@ void _showIcon(void *parameter)
     DisplayUpdater *me = dp->displayUpdater;
     auto gfx = me->gfx;
 
+    if (gfx == NULL)
+    {
+        safeSerial.println("no display!");
+        return;
+    }
+
     // me->_showRenderClickIcon = true;
 
     if (dp->flashInterval == 0)
@@ -151,6 +157,12 @@ void DisplayUpdater::hideIcon(DisplayParameters *displayParameters)
 
     displayParameters->displayUpdater = this;
 
+    if (gfx == NULL)
+    {
+        safeSerial.println("no display!");
+        return;
+    }
+
     if (displayParameters->taskHandle != NULL)
     {
         // stop the flashing task
@@ -204,7 +216,11 @@ void DisplayUpdater::showIcon(DisplayParameters *displayParameters)
 
     TaskHandle_t taskHandle = NULL; // Initialize the task handle
                                     //_showRenderClickIcon = false;
-
+    if (gfx == NULL)
+    {
+        safeSerial.println("no display!");
+        return;
+    }
     if (displayParameters->taskHandle != NULL)
     {
         // stop the flashing task
@@ -245,7 +261,11 @@ void DisplayUpdater::updateDisplay(void *parameter)
     /**/
     auto gfx = me->gfx;
 
-    gfx->begin();
+    if (gfx == NULL)
+    {
+        safeSerial.println("no display!");
+        return;
+    }
 
     gfx->setTextSize(FONT_SIZE);
     gfx->fillScreen(BLACK);
@@ -364,7 +384,12 @@ void DisplayUpdater::updateDisplay(void *parameter)
             }
         }
 
-        vTaskDelay(loopDelayMs - (millis() - startTime) / portTICK_PERIOD_MS);
+        auto sleepTime = loopDelayMs - ((long long)millis() - (long long)startTime);
+
+        if (sleepTime > 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(sleepTime));
+        }
     }
 }
 
@@ -374,7 +399,7 @@ void DisplayUpdater::begin()
     xTaskCreate(
         updateDisplay,
         "updateDisplay",
-        512 * 5,
+        512 * 6,
         this,
         1,
         NULL);
@@ -384,6 +409,16 @@ DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder
 {
     Arduino_DataBus *bus = new Arduino_HWSPI(OLED_DC, OLED_CS, OLED_SCL, OLED_SDA);
     gfx = new Arduino_SSD1331(bus, OLED_RES);
+
+    if (!gfx->begin())
+    {
+        safeSerial.println("Display begin failed");
+        gfx = NULL;
+    }
+    else
+    {
+        gfx->setRotation(2);
+    }
 
     mutex = xSemaphoreCreateMutex();
     ioTHelper = _helper;

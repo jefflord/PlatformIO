@@ -75,16 +75,27 @@ void setup()
   iotHelper.Setup();
 
   buttonServerHelper = new ButtonServerHelper();
+
   tempRecorder = new TempRecorder(&iotHelper);
+
   displayUpdater = new DisplayUpdater(&iotHelper, tempRecorder);
+
   webServerHelper = new WebServerHelper();
 
   iotHelper.SetDisplay(displayUpdater);
 
   if (touchRead(TOUCH_PIN) < 50)
   {
-    safeSerial.println("Touch on boot detected");
-    iotHelper.setSafeBoot();
+    // while (true)
+    // {
+
+    //   safeSerial.println("Touch on boot detected");
+    //   auto xxx = touchRead(TOUCH_PIN);
+    //   safeSerial.printf("Touch on boot detected %d\n", xxx);
+    //   delay(100);
+    // }
+
+    // iotHelper.setSafeBoot();
   }
 
   displayUpdater->begin();
@@ -105,8 +116,47 @@ void setup()
 int lastPotValue = -1;
 
 TaskHandle_t ArduinoOTAHandle = NULL;
+
+touch_value_t lastVal = -100;
+touch_value_t currentVal = -100;
 void loop()
 {
+
+  // currentVal = touchRead(TOUCH_PIN);
+  // if (currentVal != lastVal)
+  // {
+  //   lastVal = touchRead(TOUCH_PIN);
+  //   safeSerial.printf("touchRead %d\n", lastVal);
+  // }
+
+  // safeSerial.printf("##########\n", lastVal);
+  // lastVal = touchRead(33);
+  // safeSerial.printf("33 touchRead %d\n", lastVal);
+  // safeSerial.printf("##########\n", lastVal);
+
+  // safeSerial.printf("##########\n", lastVal);
+  // lastVal = touchRead(12);
+  // safeSerial.printf("12 touchRead %d\n", lastVal);
+  // safeSerial.printf("##########\n", lastVal);
+
+  // safeSerial.printf("##########\n", lastVal);
+  // lastVal = touchRead(13);
+  // safeSerial.printf("13 touchRead %d\n", lastVal);
+  // safeSerial.printf("##########\n", lastVal);
+
+  // safeSerial.printf("##########\n", lastVal);
+  // lastVal = touchRead(14);
+  // safeSerial.printf("14 touchRead %d\n", lastVal);
+  // safeSerial.printf("##########\n", lastVal);
+  // delay(500);
+  // return;
+
+  // safeSerial.printf("##########\n", lastVal);
+  // lastVal = touchRead(39);
+  // safeSerial.printf("39 touchRead %d\n", lastVal);
+  // safeSerial.printf("##########\n", lastVal);
+
+  lastVal = currentVal;
 
   buttonServerHelper->updateLoop();
 
