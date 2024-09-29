@@ -1,5 +1,6 @@
 #include "WebServerHelper.h"
 #include "ButtonServerHelper.h"
+#include "DisplayUpdater.h"
 #include "MyIoTHelper.h"
 
 WebServerHelper::WebServerHelper()
@@ -10,6 +11,8 @@ WebServerHelper::WebServerHelper()
 void WebServerHelper::handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
     auto buttonServerHelper = ButtonServerHelper::GetButtonServerHelper();
+    auto iotHelper = buttonServerHelper->iotHelper;
+    auto tempRecorder = buttonServerHelper->displayUpdater->tempRecorder;
     safeSerial.println("json!");
     // Parse incoming JSON
     JsonDocument jsonDoc;
@@ -25,11 +28,20 @@ void WebServerHelper::handleJsonPost(AsyncWebServerRequest *request, uint8_t *da
     // Extract data from JSON
     String action = String((const char *)jsonDoc["action"]);
 
+    JsonDocument doc;
+
     if (action == "chaos")
     {
         safeSerial.println("chaos !!!!!!");
-        buttonServerHelper->iotHelper->chaos("wifi");
-        
+        iotHelper->chaos("wifi");
+    }
+
+    if (action == "getInfo")
+    {
+        // doc["temp0"] = tempRecorder->temperatureC[0];
+        // doc["temp1"] = tempRecorder->temperatureC[1];
+        // doc["temp2"] = tempRecorder->temperatureC[2];
+        // doc["status"] = iotHelper->getFormattedTime();
     }
 
     if (action == "hitSwitch")
@@ -45,11 +57,14 @@ void WebServerHelper::handleJsonPost(AsyncWebServerRequest *request, uint8_t *da
     // int currentLedState = digitalRead(LED_BUILTIN);
     // sprintf()
 
-    JsonDocument doc;
-
-    // Add values in the document
-    doc["sensor"] = "gps";
-    doc["status"] = "success";
+    doc["temp0"] = tempRecorder->temperatureC[0];
+    doc["temp1"] = tempRecorder->temperatureC[1];
+    doc["temp2"] = tempRecorder->temperatureC[2];
+    doc["time"] = iotHelper->getFormattedTime();
+    doc["servoAngle"] = iotHelper->servoAngle;
+    doc["servoHomeAngle"] = iotHelper->servoHomeAngle;
+    doc["tempFlushIntevalSec"] = iotHelper->tempFlushIntevalSec;
+    doc["configUpdateSec"] = iotHelper->configUpdateSec;
     doc["millis"] = millis();
 
     String responseData = "";

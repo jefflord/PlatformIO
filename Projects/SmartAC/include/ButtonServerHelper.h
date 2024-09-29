@@ -54,13 +54,13 @@ public:
 
     MyIoTHelper *iotHelper;
     DisplayUpdater *displayUpdater;
+    //    TempRecorder *tempRecorder;
 
     static ButtonServerHelper *GetButtonServerHelper();
 
 private:
     static ButtonServerHelper *global;
     int actuationCounter = 0;
-    
 };
 
 #endif

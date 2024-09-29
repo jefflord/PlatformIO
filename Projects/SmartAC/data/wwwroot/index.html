@@ -47,9 +47,25 @@
             <button type="button" id="myButton" class="btn btn-primary" onclick="action(this, `hitSwitch`)">Hit
                 Switch</button>
             &nbsp;
+            <button type="button" id="myButton" class="btn btn-primary" onclick="action(this, `getInfo`)">Get
+                Info</button>
+            &nbsp;
             <button type="button" id="myButton" class="btn btn-primary" onclick="action(this, `chaos`)">Chaos</button>
         </div>
     </div>
+
+    <pre id="responseData" style="
+       display: block;
+    width: 50%;
+    margin: 20px auto 0 auto; /* Adds 20px of space above the <pre> */
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left; /* Ensures the text remains left-aligned */    
+    ">
+
+    </pre>
 
     <script>
         let smartAC = new SmartAC();

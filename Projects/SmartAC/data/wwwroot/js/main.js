@@ -17,6 +17,8 @@ class SmartAC {
             contentType: 'application/json',
             data: JSON.stringify(data),
             success: function (jsonResponse) {
+                jsonResponse["minutes"] = (jsonResponse["millis"] / 1000 / 60.0).toFixed(1);
+                $("#responseData").text(JSON.stringify(jsonResponse, null, 5));
                 let timeTaken = performance.now() - startTime;
                 console.log(`end, ${timeTaken}`, jsonResponse);
             },
