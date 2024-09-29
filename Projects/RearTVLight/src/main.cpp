@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 
 #define FLASH_BTN 0
+#define LIGHTS_PIN 12
 
 void wifiBegin()
 {
@@ -119,8 +120,11 @@ void setup()
 
   pinMode(FLASH_BTN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LIGHTS_PIN, OUTPUT);
+
 
   digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LIGHTS_PIN, HIGH);
 
   Serial.begin(115200);
   while (!Serial)
@@ -153,10 +157,12 @@ void loop()
   if (lightStateOn)
   {
     digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LIGHTS_PIN, HIGH);
   }
   else
   {
     digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(LIGHTS_PIN, LOW);
   }
 
   if (buttonState == LOW && toggleOk)
