@@ -5,7 +5,13 @@
 #include <ArduinoJson.h>
 
 #define FLASH_BTN 0
-#define LIGHTS_PIN 12
+#define LIGHTS_PIN 12 // D6
+
+#define LED_BUILTIN_OFF HIGH
+#define LED_BUILTIN_ON LOW
+
+#define LIGHTS_PIN_ON HIGH
+#define LIGHTS_PIN_OFF LOW
 
 void wifiBegin()
 {
@@ -14,7 +20,10 @@ void wifiBegin()
   int elapsed = 0;
   while (WiFi.status() != WL_CONNECTED && elapsed < timeout)
   {
-    delay(1000);
+    digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
+    delay(500);
     Serial.print("O");
     elapsed += 1000;
   }
@@ -31,7 +40,14 @@ void wifiBegin()
     // Wait for SmartConfig to finish
     while (!WiFi.smartConfigDone() && elapsed < timeout)
     {
-      delay(1000);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
+      delay(250);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
+      delay(250);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
+      delay(250);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
+      delay(250);
       Serial.print("X");
       elapsed += 1000;
     }
@@ -90,14 +106,17 @@ void handlePostRequest()
   {
     lightStateOn = true;
   }
+  else if (action == "light_toggle")
+  {
+    lightStateOn = !lightStateOn;
+  }
 
   // Perform your action based on the received data
   String result = String("Action performed: ") + action;
 
   // Create a JSON response
   JsonDocument responseDoc;
-  responseDoc["status"] = "success";
-  responseDoc["result"] = result;
+  responseDoc["light_state_on"] = lightStateOn;
 
   String response;
   serializeJson(responseDoc, response);
@@ -122,8 +141,7 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(LIGHTS_PIN, OUTPUT);
 
-
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
   digitalWrite(LIGHTS_PIN, HIGH);
 
   Serial.begin(115200);
@@ -145,8 +163,6 @@ void setup()
   Serial.println("server.begin");
 }
 
-
-
 void loop()
 {
 
@@ -156,13 +172,13 @@ void loop()
 
   if (lightStateOn)
   {
-    digitalWrite(LED_BUILTIN, LOW);
-    digitalWrite(LIGHTS_PIN, HIGH);
+    digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
+    digitalWrite(LIGHTS_PIN, LIGHTS_PIN_ON);
   }
   else
   {
-    digitalWrite(LED_BUILTIN, HIGH);
-    digitalWrite(LIGHTS_PIN, LOW);
+    digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
+    digitalWrite(LIGHTS_PIN, LIGHTS_PIN_OFF);
   }
 
   if (buttonState == LOW && toggleOk)
@@ -172,11 +188,11 @@ void loop()
     lightStateOn = !lightStateOn;
     if (lightStateOn)
     {
-      digitalWrite(LED_BUILTIN, LOW);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
     }
     else
     {
-      digitalWrite(LED_BUILTIN, HIGH);
+      digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
     }
     // delay(1000);
   }
