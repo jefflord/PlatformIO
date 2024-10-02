@@ -302,6 +302,7 @@ void setup()
   xTaskCreate(
       [](void *pvParameters)
       {
+        int updateCount = 0;
         while (true)
         {
 
@@ -343,7 +344,7 @@ void setup()
               avgV = totalV / ((millis() / 1000)) - 1;
             }
 
-            const int lowV = 3200;
+            const int lowV = 3100;
             const int highV = 4210;
 
             auto percent = (int)(100.0 * ((avgV - lowV) / (highV - lowV)));
@@ -357,14 +358,15 @@ void setup()
             }
 
             percent = (int)std::min(100, percent);
+            percent = (int)std::max(0, percent);
 
             StickCP2.Display.setTextColor(GREEN);
 
-            if (percent < 75)
+            if (percent < 25)
             {
               StickCP2.Display.setTextColor(RED);
             }
-            else if (percent < 85)
+            else if (percent < 50)
             {
               StickCP2.Display.setTextColor(YELLOW);
             }
@@ -375,7 +377,16 @@ void setup()
             {
               StickCP2.Display.clear();
               StickCP2.Display.setCursor(0, SCREEN_TOP);
-              StickCP2.Display.printf("BAT%s: %d%%\nuptime: %ld\nBusy: %d", (isCharging) ? "+" : " ", percent, millis() / 1000l, busySecs / 1000);
+
+              if ((updateCount % 2) == 0)
+              {
+                StickCP2.Display.printf("BAT: %d%%\nuptime: %ld\nBusy: %d", percent, millis() / 1000l, busySecs / 1000);
+              }
+              else
+              {
+                StickCP2.Display.printf("BAT: %.1fv\nuptime: %ld\nBusy: %d", (avgV / 1000.0), millis() / 1000l, busySecs / 1000);
+              }
+
               StickCP2.Display.setBrightness(BRIGHTNESS);
               xSemaphoreGive(_mutex);
             }
@@ -383,6 +394,7 @@ void setup()
           // busyWait(500);
 
           vTaskDelay(1000 / portTICK_PERIOD_MS);
+          updateCount++;
 
           // showStartReason();
         }
