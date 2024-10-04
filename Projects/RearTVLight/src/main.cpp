@@ -3,6 +3,8 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
+#include <ESP8266mDNS.h>
+#include <TaskScheduler.h>
 
 #define FLASH_BTN 0
 #define LIGHTS_PIN 12 // D6
@@ -134,6 +136,24 @@ void handleRoot()
   server.send(200, "text/plain", "Hello, world!"); // Send a response
 }
 
+Scheduler scheduler;
+void taskCallback()
+{
+
+  if (MDNS.begin("reartvlight"))
+  {
+    Serial.println("mDNS responder started: reartvlight.local");
+    // MDNS.addService("http", "tcp", 80);
+    MDNS.addService("_http", "_tcp", 80);
+  }
+  else
+  {
+    Serial.println("Error setting up mDNS responder!");
+  }
+}
+
+Task myTask(3, 1, &taskCallback);
+
 void setup()
 {
 
@@ -149,6 +169,9 @@ void setup()
     continue;
 
   wifiBegin();
+
+  scheduler.addTask(myTask);
+  myTask.enable();
 
   ArduinoOTA.begin();
 
@@ -166,6 +189,7 @@ void setup()
 void loop()
 {
 
+  scheduler.execute();
   server.handleClient();
 
   int buttonState = digitalRead(FLASH_BTN);
