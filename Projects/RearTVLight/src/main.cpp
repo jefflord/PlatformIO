@@ -143,8 +143,7 @@ void taskCallback()
   if (MDNS.begin("reartvlight"))
   {
     Serial.println("mDNS responder started: reartvlight.local");
-    // MDNS.addService("http", "tcp", 80);
-    MDNS.addService("_http", "_tcp", 80);
+    MDNS.addService("http", "tcp", 80);    
   }
   else
   {
