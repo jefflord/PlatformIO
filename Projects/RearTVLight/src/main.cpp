@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266mDNS.h>
 #include <TaskScheduler.h>
+#include <espnow.h>
 
 #define FLASH_BTN 0
 #define LIGHTS_PIN 12 // D6
@@ -17,6 +18,12 @@
 
 void wifiBegin()
 {
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    return;
+  }
+
   WiFi.begin();
   int timeout = 20000; // Timeout after 10 seconds
   int elapsed = 0;
@@ -70,6 +77,17 @@ void wifiBegin()
 ESP8266WebServer server(80); // Create a web server on port 80
 bool lightStateOn = false;
 bool toggleOk = true;
+
+// Structure to receive data
+typedef struct struct_message
+{
+  char action[4] = "";
+} struct_message;
+
+// Create a struct_message to hold incoming data
+struct_message lastNowMessage;
+bool lastNowMessageReady = false;
+bool espNowWorking = false;
 
 void handleOptions()
 {
@@ -133,17 +151,29 @@ void handlePostRequest()
 void handleRoot()
 {
   Serial.println("handleRoot");
-  server.send(200, "text/plain", "Hello, world!"); // Send a response
+
+  JsonDocument responseDoc;
+  responseDoc["light_state_on"] = lightStateOn;
+  responseDoc["ip"] = WiFi.localIP().toString();
+  responseDoc["mac"] = WiFi.macAddress();
+  responseDoc["last_now_message_ready"] = lastNowMessageReady;
+  responseDoc["esp_now_working"] = espNowWorking;
+  responseDoc["up_time"] = millis();
+
+  String response;
+  serializeJson(responseDoc, response);
+
+  server.send(200, "application/json", response.c_str()); // Send a response
 }
 
 Scheduler scheduler;
-void taskCallback()
+void setupmDNSTask()
 {
 
   if (MDNS.begin("reartvlight"))
   {
     Serial.println("mDNS responder started: reartvlight.local");
-    MDNS.addService("http", "tcp", 80);    
+    MDNS.addService("http", "tcp", 80);
   }
   else
   {
@@ -151,7 +181,16 @@ void taskCallback()
   }
 }
 
-Task myTask(3, 1, &taskCallback);
+Task myTaskRunner(3, 1, &setupmDNSTask);
+
+// Callback function that will be executed when data is received
+void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
+// void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+  Serial.println("command recieved");
+  memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
+  lastNowMessageReady = true;
+}
 
 void setup()
 {
@@ -169,8 +208,20 @@ void setup()
 
   wifiBegin();
 
-  scheduler.addTask(myTask);
-  myTask.enable();
+  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+
+  if (esp_now_init() != 0)
+  {
+    espNowWorking = false;
+  }
+  else
+  {
+    espNowWorking = true;
+    esp_now_register_recv_cb(OnDataRecv);
+  }
+
+  scheduler.addTask(myTaskRunner);
+  myTaskRunner.enable();
 
   ArduinoOTA.begin();
 
@@ -187,6 +238,30 @@ void setup()
 
 void loop()
 {
+
+  wifiBegin();
+
+  if (lastNowMessageReady)
+  {
+
+    if (strcmp(lastNowMessage.action, "tog") == 0)
+    {
+      lightStateOn = !lightStateOn;
+    }
+    else if (strcmp(lastNowMessage.action, "on") == 0)
+    {
+      lightStateOn = true;
+    }
+    else if (strcmp(lastNowMessage.action, "off") == 0)
+    {
+      lightStateOn = false;
+    }
+    else
+    {
+      Serial.println("unknown command");
+    }
+    lastNowMessageReady = false;
+  }
 
   scheduler.execute();
   server.handleClient();

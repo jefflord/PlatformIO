@@ -11,9 +11,7 @@
 // Structure to send data
 typedef struct struct_message
 {
-  char a[32] = "Hello ESP-NOW!";
-  int b = 42;
-  float c = 3.14;
+  char action[16] = "tog";
 } struct_message;
 
 // Create a struct_message
@@ -22,7 +20,10 @@ struct_message myData;
 // Peer MAC address
 // DeskTool: 88:13:BF:07:AC:A4
 // uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-uint8_t broadcastAddress[] = {0x88, 0x13, 0xBF, 0x07, 0xAC, 0xA4};
+
+uint8_t deskToolEspAddr[] = {0x88, 0x13, 0xBF, 0x07, 0xAC, 0xA4};
+uint8_t rearTVLightEspAddr[] = {0x60, 0x01, 0x94, 0x75, 0x22, 0x25};
+// rearTVLightEspAddr "mac": "60:01:94:75:22:25"
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
@@ -57,14 +58,15 @@ void setup()
   // Register peer
   esp_now_peer_info_t peerInfo;
   memset(&peerInfo, 0, sizeof(peerInfo));
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);  
+  memcpy(peerInfo.peer_addr, rearTVLightEspAddr, 6);
+
   peerInfo.channel = 0;
   peerInfo.encrypt = false;
 
   // Add peer  
   WiFi.mode(WIFI_STA);
   delay(20);
-  if (!esp_now_is_peer_exist(broadcastAddress))
+  if (!esp_now_is_peer_exist(rearTVLightEspAddr))
   {
     if (esp_now_add_peer(&peerInfo) != ESP_OK)
     {
@@ -107,7 +109,7 @@ void loop()
     Serial.println("touched!");
 
     // Send message via ESP-NOW
-    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+    esp_err_t result = esp_now_send(rearTVLightEspAddr, (uint8_t *)&myData, sizeof(myData));
     if (result == ESP_OK)
     {
       Serial.println("Sent with success");

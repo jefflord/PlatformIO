@@ -13,6 +13,7 @@ HardwareSerial RadarSerial(1);
 #define LED_PIN 2
 #define LED_PIN_OFF LOW
 #define LED_PIN_ON HIGH
+#define readSensorSerial false
 
 #define TOUCH_PIN 12
 #define LD2450C_PIN 23 // D23
@@ -24,6 +25,7 @@ bool dnsReady = false;
 void wiFiBegin();
 void readSensor(void *p);
 void sendToggleAction(String action);
+bool sendEspNowAction(const char *action);
 
 void mDNSSetup(void *p)
 {
@@ -56,33 +58,29 @@ void mDNSSetup(void *p)
 
 /************/
 
+uint8_t rearTVLightEspAddr[] = {0x60, 0x01, 0x94, 0x75, 0x22, 0x25}; // rearTVLightEspAddr "mac": "60:01:94:75:22:25"
+
 // Structure to receive data
 typedef struct struct_message
 {
-  char a[32];
-  int b;
-  float c;
+  char action[4] = "";
 } struct_message;
 
 // Create a struct_message to hold incoming data
-struct_message myData;
+struct_message lastNowMessage;
+bool lastNowMessageReady = false;
 
 // Callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  memcpy(&myData, incomingData, sizeof(myData));
-
-  Serial.print("Bytes received: ");
-  Serial.println(len);
-  Serial.print("Char: ");
-  Serial.println(myData.a);
-  Serial.print("Int: ");
-  Serial.println(myData.b);
-  Serial.print("Float: ");
-  Serial.println(myData.c);
-  Serial.println();
+  Serial.println("command recieved");
+  memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
+  lastNowMessageReady = true;
 }
 
+void SetupOTA();
+
+bool ArduinoOTARunning = false;
 /************/
 void setup()
 {
@@ -101,19 +99,18 @@ void setup()
 
   digitalWrite(LED_PIN, LED_PIN_OFF);
 
+  if(readSensorSerial){
+  xTaskCreate(readSensor, "readSensor", 1024 * 4, NULL, 1, NULL);
+  }
+
   if (doWiFi)
   {
     wiFiBegin();
 
     xTaskCreate(mDNSSetup, "mDNSSetup", 1024 * 2, NULL, 1, NULL);
 
-    ArduinoOTA.begin();
-  }
+    SetupOTA();
 
-  // xTaskCreate(readSensor, "readSensor", 1024 * 4, NULL, 1, NULL);
-
-  if (doWiFi)
-  {
     WiFi.mode(WIFI_STA);
     Serial.println("Setup with OTA done.");
 
@@ -125,54 +122,89 @@ void setup()
     else
     {
       Serial.println("ESP-NOW ready");
-    }
+      registerEspNowPeer();
 
-    // Register callback
-    esp_now_register_recv_cb(OnDataRecv);
+      // Register callback
+      esp_now_register_recv_cb(OnDataRecv);
+    }
   }
 }
 
-void parseSensorData(uint8_t *buffer, int length)
+void registerEspNowPeer()
 {
-  // 1. Check for Frame Header
-  int offset = 0;
-  while (buffer[offset + 0] != 0xAA)
+  // Register peer
+  esp_now_peer_info_t peerInfo;
+  memset(&peerInfo, 0, sizeof(peerInfo));
+  memcpy(peerInfo.peer_addr, rearTVLightEspAddr, 6);
+
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  // Add peer  
+  WiFi.mode(WIFI_STA);
+  delay(20);
+  if (!esp_now_is_peer_exist(rearTVLightEspAddr))
   {
-    offset++;
-    if (offset >= length)
+    if (esp_now_add_peer(&peerInfo) != ESP_OK)
     {
-      Serial.println("No valid frame header.");
-      return;
+      Serial.println("Failed to add peer:");
+
+      for (int i = 0; i < 6; i++)
+      {
+        Serial.print(peerInfo.peer_addr[i], HEX); // Print each byte in hex
+        if (i < 5)
+          Serial.print(":"); // Add colon between bytes
+      }
     }
   }
+}
 
-  if (buffer[offset + 0] == 0xAA && buffer[offset + 1] == 0xFF && buffer[offset + 2] == 0x03 && buffer[offset + 3] == 0x00)
-  {
-    // 2. Iterate through targets (up to 3)
-    for (int i = 0; i < 3; i++)
-    {
-      int targetStart = 4 + (i * 6); // Calculate starting index for each target
-      targetStart += offset;
+int otaLastPercent = -1;
+void SetupOTA()
+{
+  ArduinoOTA.onStart([]()
+                     {
+                         String type;
+                         if (ArduinoOTA.getCommand() == U_FLASH)
+                         {
+                           type = "program";
+                         }
+                         else
+                         { // U_SPIFFS
+                           type = "filesystem";
+                         }
 
-      // 3. Extract Target Data
-      int16_t xCoord = (int16_t)(buffer[targetStart] << 8 | buffer[targetStart + 1]);
-      int16_t yCoord = (int16_t)(buffer[targetStart + 2] << 8 | buffer[targetStart + 3]);
-      int16_t speed = (int16_t)(buffer[targetStart + 4] << 8 | buffer[targetStart + 5]);
+                         Serial.println("OTA Update Starting: " + type);
 
-      // 4. Print or use the extracted data
-      Serial.printf("Target %d: X = %d mm, Y = %d mm, Speed = %d cm/s\n", i + 1, xCoord, yCoord, speed);
-    }
+                         ArduinoOTARunning = true; });
+  ArduinoOTA.onEnd([]()
+                   { 
+                      ArduinoOTARunning = false;
+                      Serial.println("\nOTA Update Finished"); });
 
-    // 5. (Optional) Check for End of Frame
-    if (buffer[offset + 20] == 0x55 && buffer[offset + 21] == 0xCC)
-    {
-      //  Serial.println("End of frame received.");
-    }
-  }
-  else
-  {
-    Serial.println("Invalid frame header.");
-  }
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+                        { if ((progress / (total / 100) != otaLastPercent)) {
+                            otaLastPercent = (progress / (total / 100));
+                            Serial.printf("Progress: %u%% (%u/%u)\n", otaLastPercent, progress, total);
+                              } });
+
+  ArduinoOTA.onError([](ota_error_t error)
+                     {
+                        ArduinoOTARunning = false;
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) {
+            Serial.println("Auth Failed");
+        } else if (error == OTA_BEGIN_ERROR) {
+            Serial.println("Begin Failed");
+        } else if (error == OTA_CONNECT_ERROR) {
+            Serial.println("Connect Failed");
+        } else if (error == OTA_RECEIVE_ERROR) {
+            Serial.println("Receive Failed");
+        } else if (error == OTA_END_ERROR) {
+            Serial.println("End Failed");
+        } });
+
+  ArduinoOTA.begin();
 }
 
 int lastReading = -1;
@@ -194,6 +226,7 @@ void readSensor(void *p)
   while (true)
   {
     vTaskDelay(pdMS_TO_TICKS(1));
+    // Serial.printf("RadarSerial.available() %d\n", RadarSerial.available());
 
     if (RadarSerial.available() > 0)
     {
@@ -338,16 +371,16 @@ void readSensor(void *p)
 void loop()
 {
 
+  if (ArduinoOTARunning)
+  {
+    delay(1);
+    return;
+  }
+
   auto ld2450Val = digitalRead(LD2450C_PIN);
 
   if (lastReading != ld2450Val)
   {
-    if (!dnsReady)
-    {
-      Serial.printf("dnsReady not ready\n");
-      delay(500);
-      return;
-    }
     auto diff = ((millis() - lastChangeMs)) / 1000.0;
     Serial.printf("\nld2450Val %d, (%ld)\n", ld2450Val, diff);
     lastChangeMs = millis();
@@ -355,28 +388,26 @@ void loop()
     if (ld2450Val == 1)
     {
       digitalWrite(LED_PIN, LED_PIN_ON);
-      sendToggleAction("light_on");
+      if (!sendEspNowAction("on"))
+      {
+        sendToggleAction("light_on");
+      }
     }
     else
     {
       digitalWrite(LED_PIN, LED_PIN_OFF);
-      sendToggleAction("light_off");
+      if (!sendEspNowAction("off"))
+      {
+        sendToggleAction("light_off");
+      }
     }
   }
 
   lastReading = ld2450Val;
 
-  // if (lastReading == 1)
-  // {
-  //   digitalWrite(LED_PIN, LED_PIN_OFF);
-  // }
-  // else
-  // {
-  //   digitalWrite(LED_PIN, LED_PIN_ON);
-  // }
-
   if (doWiFi)
   {
+    wiFiBegin();
     ArduinoOTA.handle();
   }
 
@@ -406,12 +437,58 @@ void loop()
     sendToggleAction("light_toggle");
   }
 
-  delay(1000);
+  if (lastNowMessageReady)
+  {
+
+    if (strcmp(lastNowMessage.action, "tog") == 0)
+    {
+      sendToggleAction("light_toggle");
+    }
+    else if (strcmp(lastNowMessage.action, "on") == 0)
+    {
+      sendToggleAction("light_on");
+    }
+    else if (strcmp(lastNowMessage.action, "off") == 0)
+    {
+      sendToggleAction("light_off");
+    }
+    else
+    {
+      Serial.println("unknown command");
+    }
+    lastNowMessageReady = false;
+  }
+
+  delay(16);
+
   return;
+}
+
+bool sendEspNowAction(const char *action)
+{
+  strcpy(lastNowMessage.action, action);
+  esp_err_t result = esp_now_send(rearTVLightEspAddr, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
+  if (result == ESP_OK)
+  {
+    Serial.println("Sent with success");
+    return true;
+  }
+  else
+  {
+    Serial.println("Error sending the data");
+    return false;
+  }
 }
 
 void sendToggleAction(String action)
 {
+
+  if (!dnsReady)
+  {
+    Serial.printf("dnsReady not ready\n");
+    delay(500);
+    return;
+  }
 
   HTTPClient http;
 
@@ -425,8 +502,12 @@ void sendToggleAction(String action)
   // Create the JSON body
   String jsonBody = "{\"action\":\"" + action + "\"}";
 
+  // Serial.println(jsonBody);
+
   // Send POST request
   int httpResponseCode = http.POST(jsonBody);
+
+  Serial.println(jsonBody);
 
   // Check response code
   if (httpResponseCode > 0)
@@ -446,12 +527,14 @@ void sendToggleAction(String action)
 
 void wiFiBegin()
 {
-  // Try to connect to the saved WiFi credentials
-  WiFi.mode(WIFI_STA);
-  if (WiFi.status() != WL_CONNECTED)
+
+  if (WiFi.status() == WL_CONNECTED)
   {
-    WiFi.begin();
+    return;
   }
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin();
 
   // Wait for connection
   int timeout = 20000; // Timeout after 10 seconds
