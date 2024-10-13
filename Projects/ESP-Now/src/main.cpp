@@ -22,8 +22,7 @@ struct_message myData;
 // uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 uint8_t deskToolEspAddr[] = {0x88, 0x13, 0xBF, 0x07, 0xAC, 0xA4};
-uint8_t rearTVLightEspAddr[] = {0x60, 0x01, 0x94, 0x75, 0x22, 0x25};
-// rearTVLightEspAddr "mac": "60:01:94:75:22:25"
+uint8_t rearTVLightEspAddr[] = {0x60, 0x01, 0x94, 0x75, 0x22, 0x25}; // rearTVLightEspAddr "mac": "60:01:94:75:22:25"
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
