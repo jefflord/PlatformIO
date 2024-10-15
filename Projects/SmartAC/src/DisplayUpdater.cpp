@@ -289,6 +289,17 @@ void DisplayUpdater::updateDisplay(void *parameter)
             continue;
         }
 
+        if (me->ioTHelper->ArduinoOTARunning)
+        {
+            gfx->setCursor(0, SET_CUR_TOP_Y + 16);
+            gfx->setTextSize(FONT_SIZE);
+            gfx->fillScreen(BLACK);
+            gfx->setTextColor(BLUE);
+            gfx->print("..");
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
         // sprintf(timeString, "%02d:%02d:%02d %s", hours, minutes, seconds, ampm.c_str());
         // sprintf(timeString, "%4.1f\u00B0C", temperature_1_C);
 
@@ -355,18 +366,35 @@ void DisplayUpdater::updateDisplay(void *parameter)
 
                     char bufferForNumber[20];
 
+                    if (temperatureF1 > 99)
+                    {
+                        gfx->fillRect(gfx->getCursorX(), SET_CUR_TOP_Y + 32, 20, 3, BLUE);
+                        temperatureF1 -= 100;
+                    }
+
                     gfx->setTextColor(BLUE);
                     sprintf(bufferForNumber, "%2.0f", temperatureF1);
                     gfx->print(bufferForNumber);
                     gfx->setTextSize(FONT_SIZE);
 
                     auto y = gfx->getCursorY();
+                    if (temperatureF2 > 99)
+                    {
+                        gfx->fillRect(gfx->getCursorX() + 12, SET_CUR_TOP_Y + 32, 20, 3, RED);
+                        temperatureF2 -= 100;
+                    }
+
                     gfx->setCursor(gfx->getCursorX() + 12, y);
                     gfx->setTextColor(RED);
                     sprintf(bufferForNumber, "%2.0f", temperatureF2);
                     gfx->print(bufferForNumber);
                     gfx->setTextSize(FONT_SIZE);
 
+                    if (temperatureF3 > 99)
+                    {
+                        gfx->fillRect(gfx->getCursorX() + 12, SET_CUR_TOP_Y + 32, 20, 3, GREEN);
+                        temperatureF3 -= 100;
+                    }
                     gfx->setCursor(gfx->getCursorX() + 12, y);
                     gfx->setTextColor(GREEN);
                     sprintf(bufferForNumber, "%2.0f", temperatureF3);
@@ -417,7 +445,7 @@ DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder
     }
     else
     {
-        gfx->setRotation(2);
+        // gfx->setRotation(2);
     }
 
     mutex = xSemaphoreCreateMutex();

@@ -652,15 +652,20 @@ void MyIoTHelper::setSafeBoot()
 
 void MyIoTHelper::wiFiBegin()
 {
-    // Try to connect to the saved WiFi credentials
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        return;
+    }
 
     if (safeBoot)
     {
+        // Try to clear
         WiFi.begin("", "");
     }
 
     if (!safeBoot && WiFi.status() != WL_CONNECTED)
     {
+        // Try to connect to the saved WiFi credentials
         WiFi.begin();
     }
 
@@ -727,7 +732,7 @@ void MyIoTHelper::wiFiBegin()
         // Serial.printf("Connected to saved WiFi: %s\n", WiFi.SSID().c_str());
     }
 
-    safeSerial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+    safeSerial.printf("\nWiFi Connected %s, %s (%s)\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
 
     if (displayUpdater != NULL)
     {

@@ -57,6 +57,7 @@ To Do:
 // int pressDownHoldTime = 250;
 // int startAngle = 90;
 
+int otaLastPercent = -1;
 MyIoTHelper iotHelper("SmartAC");
 TempRecorder *tempRecorder;
 WebServerHelper *webServerHelper;
@@ -69,10 +70,67 @@ ButtonServerHelper *buttonServerHelper;
 ThreadSafeSerial safeSerial;
 ThreadSafeSerial *sSerial = &safeSerial;
 
+void SetupOTA()
+{
+  ArduinoOTA.onStart([]()
+                     {
+                         String type;
+                         if (ArduinoOTA.getCommand() == U_FLASH)
+                         {
+                           type = "program";
+                         }
+                         else
+                         { // U_SPIFFS
+                           type = "filesystem";
+                         }
+
+                         Serial.println("OTA Update Starting: " + type);
+
+                         iotHelper.ArduinoOTARunning = true; });
+  ArduinoOTA.onEnd([]()
+                   { 
+                      iotHelper.ArduinoOTARunning = false;
+                      Serial.println("\nOTA Update Finished"); });
+
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+                        { if ((progress / (total / 100) != otaLastPercent)) {
+                            otaLastPercent = (progress / (total / 100));
+                            Serial.printf("Progress: %u%% (%u/%u)\n", otaLastPercent, progress, total);
+                              } });
+
+  ArduinoOTA.onError([](ota_error_t error)
+                     {
+                        iotHelper.ArduinoOTARunning = false;
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) {
+            Serial.println("Auth Failed");
+        } else if (error == OTA_BEGIN_ERROR) {
+            Serial.println("Begin Failed");
+        } else if (error == OTA_CONNECT_ERROR) {
+            Serial.println("Connect Failed");
+        } else if (error == OTA_RECEIVE_ERROR) {
+            Serial.println("Receive Failed");
+        } else if (error == OTA_END_ERROR) {
+            Serial.println("End Failed");
+        } });
+
+  ArduinoOTA.begin();
+}
+
 void setup()
 {
 
+  pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
+
+  // Serial.begin(115200);
+  // while (!Serial)
+  //   continue;
+
   iotHelper.Setup();
+
+  iotHelper.wiFiBegin();
+
+  SetupOTA();
 
   buttonServerHelper = new ButtonServerHelper();
 
@@ -84,29 +142,28 @@ void setup()
 
   iotHelper.SetDisplay(displayUpdater);
 
-  if (touchRead(TOUCH_PIN) < 50)
-  {
-    // while (true)
-    // {
+  // if (touchRead(TOUCH_PIN) < 50)
+  // {
+  //   // while (true)
+  //   // {
 
-    //   safeSerial.println("Touch on boot detected");
-    //   auto xxx = touchRead(TOUCH_PIN);
-    //   safeSerial.printf("Touch on boot detected %d\n", xxx);
-    //   delay(100);
-    // }
+  //   //   safeSerial.println("Touch on boot detected");
+  //   //   auto xxx = touchRead(TOUCH_PIN);
+  //   //   safeSerial.printf("Touch on boot detected %d\n", xxx);
+  //   //   delay(100);
+  //   // }
 
-    // iotHelper.setSafeBoot();
-  }
+  //   // iotHelper.setSafeBoot();
+  // }
 
   displayUpdater->begin();
 
-  iotHelper.wiFiBegin();
-
   tempRecorder->begin();
 
-  buttonServerHelper->begin(&iotHelper, displayUpdater);
+  Serial.println("44444");
+  return;
 
-  ArduinoOTA.begin();
+  buttonServerHelper->begin(&iotHelper, displayUpdater);
 
   webServerHelper->begin();
 
@@ -156,11 +213,23 @@ void loop()
   // safeSerial.printf("39 touchRead %d\n", lastVal);
   // safeSerial.printf("##########\n", lastVal);
 
+  if (iotHelper.ArduinoOTARunning)
+  {
+    vTaskDelay(pdMS_TO_TICKS(16));
+    return;
+  }
+
   lastVal = currentVal;
 
   buttonServerHelper->updateLoop();
 
   ArduinoOTA.handle();
+
+  if (digitalRead(BOOT_BUTTON_PIN) == LOW)
+  {
+    Serial.println("BOOT_BUTTON_PIN");
+    // ButtonServerHelper::pushServoButton();
+  }
 
   vTaskDelay(pdMS_TO_TICKS(16));
 }

@@ -21,6 +21,7 @@ HardwareSerial RadarSerial(1);
 
 const bool doWiFi = true;
 bool dnsReady = false;
+NTPClient *timeClient;
 
 void wiFiBegin();
 void readSensor(void *p);
@@ -99,8 +100,9 @@ void setup()
 
   digitalWrite(LED_PIN, LED_PIN_OFF);
 
-  if(readSensorSerial){
-  xTaskCreate(readSensor, "readSensor", 1024 * 4, NULL, 1, NULL);
+  if (readSensorSerial)
+  {
+    xTaskCreate(readSensor, "readSensor", 1024 * 4, NULL, 1, NULL);
   }
 
   if (doWiFi)
@@ -411,29 +413,15 @@ void loop()
     ArduinoOTA.handle();
   }
 
-  if (touchRead(TOUCH_PIN) < 50 || digitalRead(BOOT_BUTTON_PIN) == LOW)
+  auto touchReadValue = touchRead(TOUCH_PIN);
+  if (touchReadValue > 0 && touchReadValue < 40)
   {
-
-    // if (!MDNS.begin("desktool"))
-    // {
-    //   Serial.println("Error setting up MDNS responder!");
-    // }
-    // else
-    // {
-    //   Serial.println("Device can be accessed at desktool.local");
-
-    //   if (MDNS.addService("http", "tcp", 80))
-    //   {
-    //     Serial.println("addService 1 worked");
-    //   }
-
-    //   // if (MDNS.addService("_http", "_tcp", 80))
-    //   // {
-    //   //   Serial.println("addService 2 worked");
-    //   // }
-    // }
-
-    Serial.printf("light_toggle!!!!\n");
+    Serial.printf("touch %d, light_toggle\n", touchReadValue);
+    sendToggleAction("light_toggle");
+  }
+  else if (digitalRead(BOOT_BUTTON_PIN) == LOW)
+  {
+    Serial.printf("touch boot pin, light_toggle\n");
     sendToggleAction("light_toggle");
   }
 
@@ -470,12 +458,12 @@ bool sendEspNowAction(const char *action)
   esp_err_t result = esp_now_send(rearTVLightEspAddr, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
   if (result == ESP_OK)
   {
-    Serial.println("Sent with success");
+    Serial.printf("Sent %s with success at %s\n", lastNowMessage.action, timeClient->getFormattedTime().c_str());
     return true;
   }
   else
   {
-    Serial.println("Error sending the data");
+    Serial.printf("Error sending the %s\n", lastNowMessage.action);
     return false;
   }
 }
@@ -581,7 +569,7 @@ void wiFiBegin()
   Serial.printf("\nWiFi Connected %s, %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
 
   WiFiUDP ntpUDP;
-  NTPClient *timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60 * 60 * 1000);
+  timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60 * 60 * 1000);
   timeClient->begin();
 
   auto updated = timeClient->update();

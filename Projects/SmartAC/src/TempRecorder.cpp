@@ -250,8 +250,11 @@ void TempRecorder::doTemp(void *parameter)
 
     auto sensorCount = sensors.getDeviceCount();
 
+    auto useFakeTemps = false;
+
     if (sensorCount <= 0)
     {
+        useFakeTemps = true;
         safeSerial.println("No temp sensors!!!!!!!!!!!!!!");
     }
     else
@@ -264,30 +267,51 @@ void TempRecorder::doTemp(void *parameter)
     long flushCount = 0;
     while (true)
     {
+
+        if (me->ioTHelper->ArduinoOTARunning)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
         auto currentMillis = millis();
         sensors.requestTemperatures();
 
-        int deviceCount = sensors.getDeviceCount(); // Call once
-        for (int i = 0; i < deviceCount; i++)
+        if (useFakeTemps)
         {
-            DeviceAddress deviceAddress;
-            sensors.getAddress(deviceAddress, i);
-            auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
+            for (int i = 0; i < 3; i++)
+            {
+                me->temperatureC[i] = 37 + i;
+                auto time = ioTHelper->getTime();
+                time += ioTHelper->getUTCOffset() * 1000 * -1;
+                auto itemCount = me->recordTemp("*1", time, me->temperatureC[i]);
+            }
+        }
+        else
+        {
 
-            // safeSerial.print("Sensor ");
-            // safeSerial.printf("%d, %s", i, sensorId.c_str());
-            // safeSerial.print(": ");
-            // safeSerial.println(sensors.getTempC(deviceAddress));
+            int deviceCount = sensors.getDeviceCount(); // Call once
+            for (int i = 0; i < deviceCount; i++)
+            {
+                DeviceAddress deviceAddress;
+                sensors.getAddress(deviceAddress, i);
+                auto sensorId = ioTHelper->formatDeviceAddress(deviceAddress);
 
-            me->temperatureC[i] = sensors.getTempC(deviceAddress);
-            auto time = ioTHelper->getTime();
-            // convert to UTC
-            time += ioTHelper->getUTCOffset() * 1000 * -1;
-            auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
+                // safeSerial.print("Sensor ");
+                // safeSerial.printf("%d, %s", i, sensorId.c_str());
+                // safeSerial.print(": ");
+                // safeSerial.println(sensors.getTempC(deviceAddress));
 
-            // safeSerial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
+                me->temperatureC[i] = sensors.getTempC(deviceAddress);
+                auto time = ioTHelper->getTime();
+                // convert to UTC
+                time += ioTHelper->getUTCOffset() * 1000 * -1;
+                auto itemCount = me->recordTemp(sensorId, time, me->temperatureC[i]);
 
-            // safeSerial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
+                // safeSerial.printf("'%s': %d items, time: %lld, temp: %f\n", sensorId.c_str(), itemCount, time, me->temperatureC[i]);
+
+                // safeSerial.printf("'%s': %d items, %s\n", sensorId.c_str(), itemCount, helper.getStorageAsJson(helper.getSourceId(sensorId)).c_str());
+            }
         }
 
         if (currentMillis - me->previousTempFlushMillis >= (ioTHelper->tempFlushIntevalSec * 1000))

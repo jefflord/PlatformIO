@@ -26,7 +26,10 @@
 
 #include <Arduino_GFX_Library.h>
 
+#define BOOT_BUTTON_PIN 0
 #define TOUCH_PIN 12
+
+
 #define LED_ONBOARD 2
 #define SERVO_PIN 32
 

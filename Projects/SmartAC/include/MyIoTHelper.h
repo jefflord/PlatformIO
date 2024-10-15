@@ -32,7 +32,7 @@
 #define OLED_DC 21
 #define OLED_RES 22
 #define OLED_SDA 23
-#define OLED_SCL 18
+#define OLED_SCL 18 // (SCK)
 
 #include "esp_mac.h" // required - exposes esp_mac_type_t values
 
@@ -82,7 +82,7 @@ public:
     bool testJsonBeforeSend = false;
     bool sendToDb = true;
     int tempFlushIntevalSec = 30;
-
+    bool ArduinoOTARunning = false;
     /****/
 
     void resetWifi();
