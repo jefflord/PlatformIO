@@ -34,6 +34,7 @@ To Do:
 #include "ButtonServerHelper.h"
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
+#include <ESPmDNS.h>
 
 #include <esp_system.h>
 #include <esp_task_wdt.h>
@@ -69,6 +70,37 @@ ButtonServerHelper *buttonServerHelper;
 
 ThreadSafeSerial safeSerial;
 ThreadSafeSerial *sSerial = &safeSerial;
+
+bool dnsReady = false;
+
+void mDNSSetup(void *p)
+{
+  auto waitTimeout = millis() + 100;
+  // Serial.println("MDNS setup waiting start");
+  while (waitTimeout > millis() || WiFi.status() != WL_CONNECTED)
+  {
+    vTaskDelay(pdMS_TO_TICKS(10));
+    // Serial.println("MDNS setup waiting!");
+  }
+  // Serial.println("MDNS setup waiting done");
+
+  if (!MDNS.begin("smartac"))
+  {
+    Serial.println("Error setting up MDNS responder!");
+  }
+  else
+  {
+    Serial.println("Device can be accessed at smartac.local");
+    // vTaskDelay(pdMS_TO_TICKS(100));
+    //  if (MDNS.addService("http", "tcp", 80))
+    //  {
+    //    Serial.println("addService 1 worked");
+    //  }
+
+    dnsReady = true;
+    vTaskDelete(NULL);
+  }
+}
 
 void SetupOTA()
 {
@@ -129,6 +161,8 @@ void setup()
   iotHelper.Setup();
 
   iotHelper.wiFiBegin();
+
+  xTaskCreate(mDNSSetup, "mDNSSetup", 1024 * 2, NULL, 1, NULL);
 
   SetupOTA();
 
