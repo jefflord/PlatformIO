@@ -445,7 +445,7 @@ DisplayUpdater::DisplayUpdater(MyIoTHelper *_helper, TempRecorder *_tempRecorder
     }
     else
     {
-        // gfx->setRotation(2);
+        gfx->setRotation(2);
     }
 
     mutex = xSemaphoreCreateMutex();

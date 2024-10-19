@@ -417,7 +417,18 @@ void loop()
   if (touchReadValue > 0 && touchReadValue < 40)
   {
     Serial.printf("touch %d, light_toggle\n", touchReadValue);
-    sendToggleAction("light_toggle");
+    // take a second reading
+    delay(16);
+    touchReadValue = touchRead(TOUCH_PIN);
+    if (touchReadValue > 0 && touchReadValue < 40)
+    {
+      Serial.printf("touch %d, light_toggle\n", touchReadValue);
+      sendToggleAction("light_toggle");
+    }
+    else
+    {
+      Serial.printf("SECOND touch %d, light_toggle\n", touchReadValue);
+    }
   }
   else if (digitalRead(BOOT_BUTTON_PIN) == LOW)
   {

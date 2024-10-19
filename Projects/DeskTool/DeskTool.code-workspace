@@ -3,6 +3,10 @@
 		{
 			"name": "DeskTool",
 			"path": "."
+		},
+		{
+			"name": "SmartAC",
+			"path": "../SmartAC"
 		}
 	],
 	"settings": {

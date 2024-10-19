@@ -160,9 +160,6 @@ void setup()
 
   tempRecorder->begin();
 
-  Serial.println("44444");
-  return;
-
   buttonServerHelper->begin(&iotHelper, displayUpdater);
 
   webServerHelper->begin();
