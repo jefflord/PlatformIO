@@ -1,13 +1,13 @@
 {
 	"folders": [
 		{
-			"name": "M5 Test",
-			"path": "../M5 Test"
+			"name": "BasementMainTool",
+			"path": "."
 		}
 	],
 	"settings": {
 		"files.associations": {
-			"cmath": "cpp"
+			"*.tcc": "cpp"
 		}
 	}
 }
