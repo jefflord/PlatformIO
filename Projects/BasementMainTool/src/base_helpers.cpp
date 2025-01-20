@@ -4,19 +4,57 @@
 bool dnsReady = false;
 AsyncWebServer server(8222);
 
-#define ld2450_01_TX 17
-#define ld2450_01_RX 16
+#define ld2450_02_TX 17
+#define ld2450_02_RX 16
 
-#define ld2450_02_TX 25
-#define ld2450_02_RX 26
+#define ld2450_01_TX 25
+#define ld2450_01_RX 26
+
 LD2450 ld2450_01;
 LD2450 ld2450_02;
 
 extern GlobalState globalState;
 
+// //(*esp_now_recv_cb_t)(const uint8_t *mac_addr, const uint8_t *data, int data_len)//
+// void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
+// // void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+// {
+//     Serial.println("command received");
+//     memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
+//     Serial.printf("!!!command received: %s\r\n", lastNowMessage);
+//     lastNowMessageReady = true;
+// }
+
+// Create a struct_message to hold incoming data
+
+bool espNowWorking = false;
+
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    Serial.println("command received");
+    // memcpy(&globalState.lastNowMessage, incomingData, sizeof(globalState.lastNowMessage));
+    // Serial.printf("!!!command received: %s\r\n", globalState.lastNowMessage.action);
+    // globalState.lastNowMessageReady = true;
+}
+
+void onDataSent(const uint8_t *mac, esp_now_send_status_t status)
+{
+    Serial.print(status == ESP_NOW_SEND_SUCCESS ? "Message sent successfully" : "Message failed to send to:");
+
+    for (int i = 0; i < 6; i++)
+    {
+        Serial.print(mac[i], HEX); // Print each byte in hex
+        if (i < 5)
+            Serial.print(":"); // Add colon between bytes
+    }
+    Serial.println("");
+}
+
 void wiFiBegin()
 {
     // Try to connect to the saved WiFi credentials
+
+    WiFi.mode(WIFI_STA);
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -74,6 +112,87 @@ void wiFiBegin()
 
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
+
+    
+    // Print MAC address
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    Serial.print("MAC Address: ");
+    for (int i = 0; i < 6; i++)
+    {
+        Serial.printf("%02X", mac[i]);
+        if (i < 5)
+            Serial.print(":");
+    }
+    Serial.println();
+
+    {
+        if (esp_now_init() != ESP_OK)
+        {
+            Serial.println("Error initializing ESP-NOW");
+            return;
+        }
+        else
+        {
+            Serial.println("ESP-NOW ready");
+
+            // Register callback
+            esp_now_register_recv_cb(OnDataRecv);
+            esp_now_register_send_cb(onDataSent);
+
+            registerEspNowPeer();
+        }
+    }
+}
+
+void registerEspNowPeer()
+{
+
+    uint8_t rearTVLightEspAddr[] = {0x08, 0xA6, 0xF7, 0xBC, 0x91, 0xCC};
+    WiFi.macAddress(rearTVLightEspAddr);
+
+    // Register peer
+    esp_now_peer_info_t peerInfo;
+    memset(&peerInfo, 0, sizeof(peerInfo));
+    memcpy(peerInfo.peer_addr, rearTVLightEspAddr, 6);
+
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+
+    // Add peer  
+    WiFi.mode(WIFI_STA);
+
+    delay(1000);
+
+    esp_log_level_set("*", ESP_LOG_VERBOSE); // Set the logging level to verbose
+
+    Serial.print("ADDING PEER:");
+    for (int i = 0; i < 6; i++)
+    {
+        Serial.print(peerInfo.peer_addr[i], HEX); // Print each byte in hex
+        if (i < 5)
+            Serial.print(":"); // Add colon between bytes
+    }
+
+    Serial.println("");
+
+    esp_err_t result;
+    if (!esp_now_is_peer_exist(rearTVLightEspAddr))
+    {
+        if ((result = esp_now_add_peer(&peerInfo)) != ESP_OK)
+        {
+            Serial.println("Failed to add peer.");
+            Serial.println(esp_err_to_name(result));
+        }
+        else
+        {
+            Serial.println("added peer!");
+        }
+    }
+    else
+    {
+        Serial.println("peer already exists!");
+    }
 }
 
 OTAStatus *MySetupOTA()
@@ -162,6 +281,8 @@ void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 {
     Serial.println("json!");
 
+    // sendEspNowAction("js!!");
+
     // Parse incoming JSON
     JsonDocument jsonRequestDoc;
     DeserializationError error = deserializeJson(jsonRequestDoc, data);
@@ -174,19 +295,20 @@ void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
     }
 
     // Extract data from JSON
-    bool sensorOn = jsonRequestDoc["sensorOn"];
-    bool update = jsonRequestDoc.containsKey("update") ? jsonRequestDoc["update"] : false;
-
-    // sensorOn ? ld2450_01.start() : ld2450_01.stop();
-
     JsonDocument jsonDoc;
     jsonDoc["sensorInit"] = globalState.sensorInit;
 
-    if (jsonRequestDoc.containsKey("sensorOn"))
+    if (jsonRequestDoc["sensorOn"].is<JsonVariant>())
     {
+        bool sensorOn = jsonRequestDoc["sensorOn"];
         if (sensorOn == false)
         {
             globalState.sensorInit = false;
+            digitalWrite(globalState.xBJT_PIN, LOW);
+        }
+        else
+        {
+            // digitalWrite(globalState.xBJT_PIN, HIGH);
         }
 
         jsonDoc["_old_sensorOn"] = globalState.sensorOn;
@@ -197,60 +319,72 @@ void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 
     // Add values in the document
 
-    if (update)
+    auto found_targets = -1;
+    if (jsonRequestDoc["update"].is<bool>() && jsonRequestDoc["update"].as<bool>() == true)
     {
         unsigned long startTime = 0;
         bool didInit = false;
 
-        if (globalState.sensorInit == false)
+        if (globalState.sensorOn)
         {
-            startTime = millis();
-            Serial.printf("Sensor INIT (1) AT %lu ms\n", millis() - startTime);
-            Serial2.begin(256000, SERIAL_8N1, ld2450_01_RX, ld2450_01_TX); // TX=17, RX=16
-
-            Serial.printf("Sensor INIT (2) AT %lu ms\n", millis() - startTime);
-
-            ld2450_01.begin(Serial2); // Pass Serial2 to the library
-
-            Serial.printf("Sensor INIT (3) AT %lu ms\n", millis() - startTime);
-
-            ld2450_01.waitForSensorMessage(false);
-            Serial.printf("Sensor INIT (4) AT %lu ms\n", millis() - startTime);
-
-            Serial.printf("Sensor INIT (5) AT %lu ms\n", millis() - startTime);
-
-            ld2450_01.waitForSensorMessage(false);
-            Serial.printf("Sensor INIT (6a) AT %lu ms\n", millis() - startTime);
-
-            auto testRead = -1;
-            auto maxReadTries = 10;
-            auto readTries = 0;
-            while (testRead == -1 && readTries < maxReadTries)
+            if (globalState.sensorInit == false)
             {
-                readTries++;
-                testRead = ld2450_01.read();
-                if (testRead == -1)
+                digitalWrite(globalState.xBJT_PIN, HIGH);
+                delay(100);
+
+                startTime = millis();
+                Serial.printf("Sensor INIT (1) AT %lu ms\n", millis() - startTime);
+                Serial2.begin(256000, SERIAL_8N1, ld2450_01_RX, ld2450_01_TX); // TX=17, RX=16
+
+                Serial.printf("Sensor INIT (2) AT %lu ms\n", millis() - startTime);
+
+                ld2450_01.begin(Serial2); // Pass Serial2 to the library
+
+                Serial.printf("Sensor INIT (3) AT %lu ms\n", millis() - startTime);
+
+                ld2450_01.waitForSensorMessage(false);
+                Serial.printf("Sensor INIT (4) AT %lu ms\n", millis() - startTime);
+
+                Serial.printf("Sensor INIT (5) AT %lu ms\n", millis() - startTime);
+
+                // ld2450_01.waitForSensorMessage(false);
+                Serial.printf("Sensor INIT (6a) AT %lu ms\n", millis() - startTime);
+
+                auto maxReadTries = 50;
+                auto readTries = 0;
+                while (found_targets == -1 && readTries < maxReadTries)
                 {
-                    delay(20);
+                    readTries++;
+                    found_targets = ld2450_01.read();
+                    if (found_targets == -1)
+                    {
+                        delay(100);
+                        Serial.printf("Sensor INIT (delay) AT readTries:%i AT %lu ms\n", readTries, millis() - startTime);
+                    }
+                    else
+                    {
+                        Serial.printf("Sensor INIT (break) AT readTries:%i AT %lu ms\n", readTries, millis() - startTime);
+                        break;
+                    }
                 }
+
+                Serial.printf("Sensor INIT (6b) found_targets:%d, readTries:%i AT %lu ms\n", found_targets, readTries, millis() - startTime);
+
+                globalState.sensorInit = true;
+                didInit = true;
             }
-
-            Serial.printf("Sensor INIT (6b) AT %d, readTries:%i AT %lu ms\n", testRead, readTries, millis() - startTime);
-
-            globalState.sensorInit = true;
-            didInit = true;
-        }
-        else
-        {
-            startTime = millis();
+            else
+            {
+                startTime = millis();
+            }
         }
 
-        if (ld2450_01.read() > 0)
+        if (found_targets > 0 || (found_targets = ld2450_01.read()) > 0)
         {
             unsigned long duration = millis() - startTime;
             Serial.printf("Sensor read took %lu ms\n", duration);
-            const int found_targets = ld2450_01.read();
-            if (found_targets > 0)
+            // const int found_targets = ld2450_01.read();
+            // if (found_targets > 0)
             {
 
                 auto lastTargetMessage = ld2450_01.getLastTargetMessage();
@@ -356,6 +490,11 @@ void handleGetHtml(AsyncWebServerRequest *request)
             button:hover {
                 background-color: #0056b3;
             }
+            button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
         </style>
     </head>
     <body>
@@ -372,6 +511,8 @@ void handleGetHtml(AsyncWebServerRequest *request)
             // Add a script to the page
             console.log('Script added to the page');            
             $('#sensorOn').click(function() {
+                let $btn = $(this);
+                $btn.prop('disabled', true);
                 $.ajax({
                     url: '/json',
                     type: 'POST',
@@ -385,11 +526,14 @@ void handleGetHtml(AsyncWebServerRequest *request)
                         console.error('Error:', status, error);
                     },
                     complete: function() {
+                        $btn.prop('disabled', false);
                         console.log('Request completed');
                     }
                 });
             });
             $('#sensorOff').click(function() {
+                let $btn = $(this);
+                $btn.prop('disabled', true);
                 $.ajax({
                     url: '/json',
                     type: 'POST',
@@ -403,12 +547,15 @@ void handleGetHtml(AsyncWebServerRequest *request)
                         console.error('Error:', status, error);
                     },
                     complete: function() {
+                        $btn.prop('disabled', false);
                         console.log('Request completed');
                     }
                 });
             });
 
             $('#update').click(function() {
+                let $btn = $(this);
+                $btn.prop('disabled', true);
                 $.ajax({
                     url: '/json',
                     type: 'POST',
@@ -423,6 +570,7 @@ void handleGetHtml(AsyncWebServerRequest *request)
                         console.error('Error:', status, error);
                     },
                     complete: function() {
+                        $btn.prop('disabled', false);
                         console.log('Request completed');
                     }
                 });
@@ -452,4 +600,41 @@ void setupServer()
     server.on("/json", HTTP_POST, handlePostXHtml, NULL, handleJsonPost);
 
     server.begin();
+}
+
+struct_message lastNowMessage;
+bool sendEspNowAction(const char *action)
+{
+
+    // registerEspNowPeer();
+
+    // strcpy(lastNowMessage.action, action);
+    uint8_t rearTVLightEspAddr[] = {0x08, 0xA6, 0xF7, 0xBC, 0x91, 0xCC};
+    WiFi.macAddress(rearTVLightEspAddr);
+
+    strcpy(lastNowMessage.action, "testX");
+
+    Serial.print("sendEspNowAction:");
+    for (int i = 0; i < 6; i++)
+    {
+        Serial.print(rearTVLightEspAddr[i], HEX); // Print each byte in hex
+        if (i < 5)
+            Serial.print(":"); // Add colon between bytes
+    }
+    Serial.println("");
+
+    esp_err_t result = esp_now_send(rearTVLightEspAddr, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
+    // esp_err_t result = esp_now_send(ownMac, (uint8_t *) &myData, sizeof(myData));
+
+    if (result == ESP_OK)
+    {
+        // Serial.printf("Sent %s with success\n", lastNowMessage.action);
+        return true;
+    }
+    else
+    {
+        Serial.printf("Error sending [%s]\n", lastNowMessage.action);
+        Serial.println(esp_err_to_name(result));
+        return false;
+    }
 }
