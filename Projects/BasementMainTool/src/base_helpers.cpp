@@ -15,39 +15,90 @@ LD2450 ld2450_02;
 
 extern GlobalState globalState;
 
-// //(*esp_now_recv_cb_t)(const uint8_t *mac_addr, const uint8_t *data, int data_len)//
-// void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
-// // void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
-// {
-//     Serial.println("command received");
-//     memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
-//     Serial.printf("!!!command received: %s\r\n", lastNowMessage);
-//     lastNowMessageReady = true;
-// }
-
 // Create a struct_message to hold incoming data
 
 bool espNowWorking = false;
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-    Serial.println("command received");
-    // memcpy(&globalState.lastNowMessage, incomingData, sizeof(globalState.lastNowMessage));
-    // Serial.printf("!!!command received: %s\r\n", globalState.lastNowMessage.action);
-    // globalState.lastNowMessageReady = true;
+    if (false)
+    {
+        Serial.print("command received from:");
+        for (int i = 0; i < 6; i++)
+        {
+            Serial.printf("%02X", mac[i]);
+            if (i < 5)
+                Serial.print(":"); // Add colon between bytes
+        }
+        Serial.print(" --> ");
+    }
+
+    if (len < sizeof(struct_message) || len > struct_message_MAX_EXPECTED_DATA_SIZE)
+    {
+        // print "invalid message size" and include len, and sizeof(struct_message), and struct_message_MAX_EXPECTED_DATA_SIZE
+        Serial.printf("invalid message size %i, %i, %i\n", len, sizeof(struct_message), struct_message_MAX_EXPECTED_DATA_SIZE);
+        return;
+    }
+
+    memcpy(&globalState.lastNowMessage, incomingData, sizeof(globalState.lastNowMessage));
+
+    // check type, make sure it's "bmt"
+    if (strncmp(globalState.lastNowMessage.type, DATA_TYPE_NAME, 3) != 0)
+    {
+        Serial.println("invalid message type");
+        return;
+    }
+    else
+    {
+        // Serial.println("type:OK");
+    }
+
+    // make sure the version is correct
+    if (globalState.lastNowMessage.version != DATA_VERSION)
+    {
+        Serial.println("invalid message version");
+        return;
+    }
+    else
+    {
+        // Serial.println("version:OK");
+    }
+
+    Serial.printf("bmt command received: %s\r\n", globalState.lastNowMessage.action);
+    globalState.lastNowMessageReady = true;
 }
 
 void onDataSent(const uint8_t *mac, esp_now_send_status_t status)
 {
-    Serial.print(status == ESP_NOW_SEND_SUCCESS ? "Message sent successfully" : "Message failed to send to:");
+    Serial.print(status == ESP_NOW_SEND_SUCCESS ? "Message sent successfully: " : "Message failed to send to: ");
 
     for (int i = 0; i < 6; i++)
     {
-        Serial.print(mac[i], HEX); // Print each byte in hex
+        Serial.printf("%02X", mac[i]);
         if (i < 5)
             Serial.print(":"); // Add colon between bytes
     }
     Serial.println("");
+}
+
+void getPeer(uint8_t *dest)
+{
+    uint8_t bmtool1[] = {0x08, 0xA6, 0xF7, 0xBC, 0x91, 0xCC};
+    uint8_t bmtool2[] = {0x4C, 0x11, 0xAE, 0x73, 0xF1, 0x4C};
+    uint8_t currentMac[6];
+    WiFi.macAddress(currentMac);
+
+    bool matches = true;
+    for (int i = 0; i < 6; i++)
+    {
+        if (currentMac[i] != bmtool1[i])
+        {
+            matches = false;
+            break;
+        }
+    }
+
+    memcpy(dest, matches ? bmtool2 : bmtool1, 6);
 }
 
 void wiFiBegin()
@@ -113,7 +164,6 @@ void wiFiBegin()
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
 
-    
     // Print MAC address
     uint8_t mac[6];
     WiFi.macAddress(mac);
@@ -148,13 +198,13 @@ void wiFiBegin()
 void registerEspNowPeer()
 {
 
-    uint8_t rearTVLightEspAddr[] = {0x08, 0xA6, 0xF7, 0xBC, 0x91, 0xCC};
-    WiFi.macAddress(rearTVLightEspAddr);
-
     // Register peer
     esp_now_peer_info_t peerInfo;
     memset(&peerInfo, 0, sizeof(peerInfo));
-    memcpy(peerInfo.peer_addr, rearTVLightEspAddr, 6);
+
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+    // getPeer(peerInfo.peer_addr);
 
     peerInfo.channel = 0;
     peerInfo.encrypt = false;
@@ -169,7 +219,8 @@ void registerEspNowPeer()
     Serial.print("ADDING PEER:");
     for (int i = 0; i < 6; i++)
     {
-        Serial.print(peerInfo.peer_addr[i], HEX); // Print each byte in hex
+
+        Serial.printf("%02X", peerInfo.peer_addr[i]);
         if (i < 5)
             Serial.print(":"); // Add colon between bytes
     }
@@ -177,7 +228,7 @@ void registerEspNowPeer()
     Serial.println("");
 
     esp_err_t result;
-    if (!esp_now_is_peer_exist(rearTVLightEspAddr))
+    if (!esp_now_is_peer_exist(peerInfo.peer_addr))
     {
         if ((result = esp_now_add_peer(&peerInfo)) != ESP_OK)
         {
@@ -606,24 +657,26 @@ struct_message lastNowMessage;
 bool sendEspNowAction(const char *action)
 {
 
-    // registerEspNowPeer();
+    uint8_t dest[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    memcpy(dest, broadcastAddress, 6);
+    // getPeer(dest);
 
-    // strcpy(lastNowMessage.action, action);
-    uint8_t rearTVLightEspAddr[] = {0x08, 0xA6, 0xF7, 0xBC, 0x91, 0xCC};
-    WiFi.macAddress(rearTVLightEspAddr);
+    // Serial.print("Sending to: ");
+    // for (int i = 0; i < 6; i++)
+    // {
+    //     Serial.printf("%02X", dest[i]);
+    //     if (i < 5)
+    //         Serial.print(":"); // Add colon between bytes
+    // }
 
-    strcpy(lastNowMessage.action, "testX");
+    // Serial.println("");
 
-    Serial.print("sendEspNowAction:");
-    for (int i = 0; i < 6; i++)
-    {
-        Serial.print(rearTVLightEspAddr[i], HEX); // Print each byte in hex
-        if (i < 5)
-            Serial.print(":"); // Add colon between bytes
-    }
-    Serial.println("");
+    strcpy(lastNowMessage.action, ("from:" + WiFi.localIP().toString()).c_str());
 
-    esp_err_t result = esp_now_send(rearTVLightEspAddr, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
+    Serial.printf("Sending [%s]\n", lastNowMessage.action);
+
+    esp_err_t result = esp_now_send(dest, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
     // esp_err_t result = esp_now_send(ownMac, (uint8_t *) &myData, sizeof(myData));
 
     if (result == ESP_OK)
