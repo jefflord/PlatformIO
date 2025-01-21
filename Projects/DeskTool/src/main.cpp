@@ -16,6 +16,7 @@ HardwareSerial RadarSerial(1);
 #define readSensorSerial false
 
 #define TOUCH_PIN 12
+// NOTE, I think it's really a LD2410C not a "LD2450C", there is no such thing as a "LD2450C"?
 #define LD2450C_PIN 23 // D23
 #define BOOT_BUTTON_PIN 0
 
@@ -74,8 +75,20 @@ bool lastNowMessageReady = false;
 // Callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  Serial.println("command recieved");
+
+  if (len != sizeof(lastNowMessage))
+  {
+    lastNowMessageReady = false;
+    Serial.printf("bad data received, len:%d, expected:%d\n", len, sizeof(lastNowMessage));
+    return;
+  }
+  else
+  {
+    Serial.printf("data received, len:%d\n", len);
+  }
+
   memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
+
   lastNowMessageReady = true;
 }
 

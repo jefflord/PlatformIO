@@ -3,6 +3,10 @@
 		{
 			"name": "BasementMainTool",
 			"path": "."
+		},
+		{
+			"name": "DeskTool",
+			"path": "../DeskTool"
 		}
 	],
 	"settings": {
