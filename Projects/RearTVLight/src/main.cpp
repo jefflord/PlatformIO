@@ -187,7 +187,29 @@ Task myTaskRunner(3, 1, &setupmDNSTask);
 void OnDataRecv(uint8_t *mac, uint8_t *incomingData, uint8_t len)
 // void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  Serial.println("command recieved");
+  // Serial.println("command recieved");
+
+  if (len != sizeof(lastNowMessage))
+  {
+
+    // for (int i = 0; i < 3; i++)
+    // {
+
+    //   delay(2000);
+
+    //   digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
+    //   digitalWrite(LIGHTS_PIN, LIGHTS_PIN_ON);
+
+    //   delay(2000);
+
+    //   digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
+    //   digitalWrite(LIGHTS_PIN, LIGHTS_PIN_OFF);
+    // }
+
+    // Serial.println("invalid message size");
+    return;
+  }
+
   memcpy(&lastNowMessage, incomingData, sizeof(lastNowMessage));
   lastNowMessageReady = true;
 }
