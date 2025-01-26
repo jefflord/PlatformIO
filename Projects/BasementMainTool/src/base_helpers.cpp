@@ -38,18 +38,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         globalState.lastNowMessage.tokenHolder_MacAddress: the mac address of the node that CURRENTLY has the token, according to the node that sent this message
     */
 
-    if (false)
-    {
-        Serial.print("command received from:");
-        for (int i = 0; i < 6; i++)
-        {
-            Serial.printf("%02X", mac[i]);
-            if (i < 5)
-                Serial.print(":"); // Add colon between bytes
-        }
-        Serial.print(" --> ");
-    }
-
     if (len < sizeof(struct_message) || len > struct_message_MAX_EXPECTED_DATA_SIZE)
     {
         // print "invalid message size" and include len, and sizeof(struct_message), and struct_message_MAX_EXPECTED_DATA_SIZE
@@ -93,7 +81,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     if (node == nullptr)
     {
         safeSerial.printf("OnDataRecv: someone is new to the party => %s\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
-        globalState.nodes.AddNode(new Node("new", globalState.lastNowMessage.update_MacAddress, globalState.lastNowMessage.update_status, millis()));
+        globalState.nodes.AddNode(new Node("new", globalState.lastNowMessage.update_MacAddress, globalState.lastNowMessage.update_status, 0));
     }
     else
     {
@@ -118,58 +106,21 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 auto timeSinceLastWork = millis() - me->lastWorkTime;
                 if (timeSinceLastWork > 1000)
                 {
-                    // safeSerial.printf("I have not done anything in %ld, I will take the token if you insist.(from:%s, to:%s, status: %d, was: %d) \r\n",
-                    //                   convertMacAddressToString(mac),
-                    //                   convertMacAddressToString(globalState.lastNowMessage.update_MacAddress),
-                    //                   globalState.lastNowMessage.update_status,
-                    //                   timeSinceLastWork,
-                    //                   me->status);
+                    safeSerial.printf("Last work %ld ms ago, I will take the token yet. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
                     me->status = 1;
                 }
                 else
                 {
-                    safeSerial.printf("I worked just %ld ms ago, I will NOT take the token yet. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
+                    // safeSerial.printf("I worked just %ld ms ago, I will NOT take the token yet. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
                 }
-
-                // if (me->lostTokenReminder >= 3)
-                // {
-                //     safeSerial.printf("I will take the token, fine %d\r\n", me->lostTokenReminder);
-                //     me->status = 1;
-                // }
             }
-        }
-        else
-        {
-            // they are not handing off the token, because someone else has it.
-            // and that othe person is not me
         }
     }
     else if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
     {
         // they are not handing off the token and who they think has it is the broadcast address (or not us)
-        safeSerial.printf("%s does not have the token and does not know who does\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+        safeSerial.printf("%s does not have the token and does not know who does!!!\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
     }
-
-    // if (globalState.lastNowMessage.update_status == 1)
-    // {
-    //     auto nodeWithToken = globalState.nodes.GetNextReady(1);
-    //     if (memcmp(nodeWithToken->macAddress, globalState.lastNowMessage.update_MacAddress, 6) == 0)
-    //     {
-    //         // safeSerial.printf("Token refresh at %s\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
-    //     }
-    //     else if (memcmp(mac, globalState.lastNowMessage.update_MacAddress, 6) == 0)
-    //     {
-    //         safeSerial.printf("Token affirmation from %s\r\n", convertMacAddressToString(mac));
-    //     }
-    //     else
-    //     {
-    //         safeSerial.printf("Token hand off from %s to %s\r\n", convertMacAddressToString(mac), convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
-    //     }
-    // }
-    // else
-    // {
-    //     safeSerial.printf("??? Token hand off from %s to %s with status:%d\r\n", convertMacAddressToString(mac), convertMacAddressToString(globalState.lastNowMessage.update_MacAddress), globalState.lastNowMessage.update_status);
-    // }
 
     // Serial.printf("bmt command received: %s\r\n", globalState.lastNowMessage.action);
     globalState.lastNowMessageReady = true;

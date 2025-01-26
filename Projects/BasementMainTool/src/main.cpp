@@ -73,7 +73,7 @@ void setup()
 {
 
   WiFi.macAddress(globalState.macAddress);
-  meNode = new Node("self", globalState.macAddress, 0, millis());
+  meNode = new Node("self", globalState.macAddress, 0, 0);
 
   globalState.nodes.AddNode(meNode);
 
@@ -158,9 +158,11 @@ void printNodes()
   }
 }
 
-bool announcementToggle = false;
-auto checkInterval = 500;
-auto lightOnTime = 5000;
+bool announcementToggle = true;
+auto checkInterval = 100;
+auto lightOnTime = 3000;
+
+// auto lastWorkTime = millis() - millis();
 
 void loop()
 {
@@ -186,91 +188,100 @@ void loop()
      * status = 1: your turn
      */
 
+    // safeSerial.printf("XA_1: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
+    // delay(10);
+    // safeSerial.printf("XA_2: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
+
     globalState.nodes.DeleteDeadNodes(meNode, 5000 / checkInterval); // 10 second?
 
     // printNodes();
 
-    auto tokenNode = globalState.nodes.GetNextReady(1);
+    auto tokenNode = globalState.nodes.GetTokenHolder();
 
     auto nodeCount = globalState.nodes.GetAllNodes().size();
 
-    // if (nodeCount == 1)
-    // {
-    //   safeSerial.println("It's just me!");
-    //   // let everyone know it's my turn
-    //   meNode->status = 1;
-    // }
+    // safeSerial.printf("XB_1: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
+    // delay(10);
+    // safeSerial.printf("XB_2: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
 
     if (tokenNode == meNode)
     {
+      auto timeSinceLastWork = millis() - meNode->lastWorkTime;
+
+      // yay, I have the token
       meNode->lostTokenReminder = 0;
       meNode->feetDeep = 0;
       meNode->lastWorkTime = millis();
 
-      // safeSerial.printf("UPDATE (nodeCount:%d) %s %d, %s %d\r\n", nodeCount, meNode->macAddressAsString(), meNode->status, meNode->macAddressAsString(), meNode->status);
+      // tell everyone I have the token
       sendEspNodeUpdate(meNode, meNode);
 
       // safeSerial.println("doing stuff: ");
-      digitalWrite(x_LED_PIN, x_LED_ON);
-      safeSerial.println("LED ON");
-
-      auto loopCount = 5;
-      for (auto i = 0; i < loopCount; i++)
+      // do the work (with reminders that I have the token)
       {
-        // need to say I have the token
+        digitalWrite(x_LED_PIN, x_LED_ON);
+        safeSerial.printf("LED ON (timeSinceLastWork:%ld)\r\n", timeSinceLastWork);
 
-        delay(lightOnTime / loopCount);
+        auto loopCount = 5;
+        for (auto i = 0; i < loopCount; i++)
+        {
+          // need to say I have the token
+
+          delay(lightOnTime / loopCount);
+          meNode->lastWorkTime = millis();
+
+          // remind everyone I am still here
+          // safeSerial.printf("UPDATE (nodeCount:%d) %s %d, %s %d", nodeCount, meNode->macAddressAsString(), meNode->status, meNode->macAddressAsString(), meNode->status);
+          sendEspNodeUpdate(meNode, meNode);
+        }
+
         meNode->lastWorkTime = millis();
+        // lastWorkTime = millis();
 
-        // remind everyone I am still here
-        // safeSerial.printf("UPDATE (nodeCount:%d) %s %d, %s %d", nodeCount, meNode->macAddressAsString(), meNode->status, meNode->macAddressAsString(), meNode->status);
-        sendEspNodeUpdate(meNode, meNode);
+        digitalWrite(x_LED_PIN, x_LED_OFF);
+        safeSerial.println("LED OFF");
+        // safeSerial.println("done doing stuff, handing token off");
       }
 
-      digitalWrite(x_LED_PIN, x_LED_OFF);
-      safeSerial.println("LED OFF");
-      // safeSerial.println("done doing stuff, handing token off");
+      // get next
 
-      // sendEspNodeUpdate(meNode);
+      // safeSerial.printf("A: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
       tokenNode = globalState.nodes.SetNextAsReady(meNode);
+      // safeSerial.printf("B: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
 
-      if (tokenNode != meNode)
-      {
-        // safeSerial.printf("it's %s turn now not me %s\r\n", tokenNode->macAddressAsString(), meNode->macAddressAsString());
-      }
+      // if (tokenNode != meNode)
+      // {
+      //   safeSerial.printf("it's %s turn now not me %s\r\n", tokenNode->macAddressAsString(), meNode->macAddressAsString());
+      // }
+      // else
+      // {
+      //   safeSerial.printf("ME AGAIN? %s turn now not me %s\r\n", tokenNode->macAddressAsString(), meNode->macAddressAsString());
+      // }
 
-      // tell the new next node it's their turn
-      // safeSerial.printf("NEXT (nodeCount:%d) %s %d, %s %d\r\n", nodeCount, tokenNode->macAddressAsString(), tokenNode->status, tokenNode->macAddressAsString(), tokenNode->status);
+      // announce that I am done and tell who has the token now
       sendEspNodeUpdate(tokenNode, tokenNode);
+
+      // safeSerial.printf("C1: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
+      // delay(10);
+      // safeSerial.printf("C2: %s\r\n", globalState.nodes.GetTokenHolder()->macAddressAsString());
     }
     else
     {
+      // someone else has the token, dig them deeper in the ground
       tokenNode->feetDeep++;
+      tokenNode->lastWorkTime = millis();
     }
 
-    announcementToggle = !announcementToggle;
+    // announcementToggle = !announcementToggle;
     if (announcementToggle)
     {
 
       digitalWrite(x_LED_PIN, x_LED_OFF);
-      // just send announcement that I am still here.
-      // safeSerial.printf("Announcing (nodeCount:%d) %s %d, %s %d\r\n", nodeCount, meNode->macAddressAsString(), meNode->status, tokenNode->macAddressAsString(), tokenNode->status);
+      // just send announcement that I am still here, and remind everyone who has the token, they might need to know!
       sendEspNodeUpdate(meNode, tokenNode);
     }
 
     lastSentTime = millis();
-
-    // toggle = !toggle;
-    // if (toggle)
-    // {
-    //   digitalWrite(x_LED_PIN, HIGH);
-    //   safeSerial.println("LED ON");
-    // }
-    // else
-    // {
-    //   digitalWrite(x_LED_PIN, LOW);
-    //   safeSerial.println("LED OFF");
-    // }
   }
 
   // loopCounter++;

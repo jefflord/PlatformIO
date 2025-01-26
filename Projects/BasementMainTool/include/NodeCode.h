@@ -41,6 +41,8 @@ class NodeList
 private:
     std::vector<Node *> nodes_;
 
+    Node *_meNode;
+
     static bool compareNodesByMac(const Node *a, const Node *b)
     {
         return memcmp(a->macAddress, b->macAddress, 6) < 0;
@@ -49,13 +51,20 @@ private:
 public:
     void AddNode(Node *node)
     {
+
         nodes_.push_back(node);
+
+        // if this is the first, set _meNode to it
+        if (nodes_.size() == 1)
+        {
+            _meNode = node;
+        }
     }
 
     Node *SetNextAsReady(Node *currentNode)
     {
-        //currentNode->status = 0;
-        
+        // currentNode->status = 0;
+
         if (nodes_.empty())
         {
             return nullptr; // Nothing to do if the list is empty
@@ -179,19 +188,35 @@ public:
         return nodes_; // Creates a shallow copy of the vector
     }
 
-    Node *GetNextReady(int status)
+    Node *GetTokenHolder()
     {
         for (Node *node : nodes_)
         {
-            if (node->status == status)
+            if (node->status == 1)
             {
                 return node;
             }
         }
 
-        auto node = nodes_[0]; // If no node is ready, return the first one
-        node->status = 1;
-        return node;
+        if (nodes_.size() == 1)
+        {
+            nodes_[0]->status = 1;
+            return nodes_[0]; // If only one node, return it
+        }
+
+        // find the one with the lowest node->lastWorkTime and set it to 1 and return it
+        auto minNode = *std::min_element(nodes_.begin(), nodes_.end(), [](Node *a, Node *b)
+                                         { return a->lastWorkTime < b->lastWorkTime; });
+
+        minNode->status = 1;
+
+        // don't reset the lastWorkTime if it's me
+        if (_meNode != minNode)
+        {
+            minNode->lastWorkTime = millis();
+        }
+
+        return minNode;
     }
 
     bool Contains(Node *node)
