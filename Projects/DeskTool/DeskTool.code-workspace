@@ -1,8 +1,8 @@
 {
-	"folders": [
+	"folders": [		
 		{
-			"name": "M5 Test",
-			"path": "../M5 Test"
+			"name": "DeskTool",
+			"path": "."
 		}
 	],
 	"settings": {

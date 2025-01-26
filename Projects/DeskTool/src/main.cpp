@@ -79,7 +79,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
   if (len != sizeof(lastNowMessage))
   {
     lastNowMessageReady = false;
-    Serial.printf("bad data received, len:%d, expected:%d\n", len, sizeof(lastNowMessage));
+    // Serial.printf("bad data received, len:%d, expected:%d\n", len, sizeof(lastNowMessage));
     return;
   }
   else
