@@ -14,13 +14,30 @@ LD2450 ld2450_01;
 LD2450 ld2450_02;
 
 extern GlobalState globalState;
+extern ThreadSafeSerial safeSerial;
 
 // Create a struct_message to hold incoming data
 
 bool espNowWorking = false;
 
+int OnDataRecvCounter = 0;
+
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+
+    OnDataRecvCounter++;
+
+    if (OnDataRecvCounter % 100 == 0)
+    {
+        safeSerial.printf("OnDataRecvCounter: %d\r\n", OnDataRecvCounter);
+    }
+
+    /*
+        globalState.lastNowMessage.update_MacAddress: the mac address of the node that CHANGING token status
+        globalState.lastNowMessage.update_status: the status of the node that is CHANGING token status, 0 = update_MacAddress no token, 1 = update_MacAddress has token
+        globalState.lastNowMessage.tokenHolder_MacAddress: the mac address of the node that CURRENTLY has the token, according to the node that sent this message
+    */
+
     if (false)
     {
         Serial.print("command received from:");
@@ -64,12 +81,103 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         // Serial.println("version:OK");
     }
 
-    Serial.printf("bmt command received: %s\r\n", globalState.lastNowMessage.action);
+    // safeSerial.printf("DEBUG OnDataRecv: %s %d, %s \r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress), globalState.lastNowMessage.update_status, convertMacAddressToString(globalState.lastNowMessage.tokenHolder_MacAddress));
+
+    if (globalState.lastNowMessage.update_status == 1)
+    {
+        globalState.nodes.FreeTokenEverywhere();
+    }
+
+    auto node = globalState.nodes.GetByMac(globalState.lastNowMessage.update_MacAddress);
+    auto nodeExists = node != nullptr;
+    if (node == nullptr)
+    {
+        safeSerial.printf("OnDataRecv: someone is new to the party => %s\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+        globalState.nodes.AddNode(new Node("new", globalState.lastNowMessage.update_MacAddress, globalState.lastNowMessage.update_status, millis()));
+    }
+    else
+    {
+        // safeSerial.printf("OnDataRecv: updating node: %s, status: %d\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress), globalState.lastNowMessage.update_status);
+        globalState.nodes.SetStatusByMac(globalState.lastNowMessage.update_MacAddress, globalState.lastNowMessage.update_status);
+    }
+
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    // safeSerial.println("A!");
+    //  check to see if broadcastAddress is the same as globalState.lastNowMessage.tokenHolder_MacAddress
+    if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) != 0)
+    {
+        // if this is not saying who the token is for, then we need to check to see who they think has the token, maybe it's us!
+        if (memcmp(globalState.macAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
+        {
+            // the don't have the token, but they think we do!
+            auto me = globalState.nodes.GetByMac(globalState.macAddress);
+            if (me->status != 1)
+            {
+                // they think we have the token, but we don't, so we should take it!
+                auto timeSinceLastWork = millis() - me->lastWorkTime;
+                if (timeSinceLastWork > 1000)
+                {
+                    // safeSerial.printf("I have not done anything in %ld, I will take the token if you insist.(from:%s, to:%s, status: %d, was: %d) \r\n",
+                    //                   convertMacAddressToString(mac),
+                    //                   convertMacAddressToString(globalState.lastNowMessage.update_MacAddress),
+                    //                   globalState.lastNowMessage.update_status,
+                    //                   timeSinceLastWork,
+                    //                   me->status);
+                    me->status = 1;
+                }
+                else
+                {
+                    safeSerial.printf("I worked just %ld ms ago, I will NOT take the token yet. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
+                }
+
+                // if (me->lostTokenReminder >= 3)
+                // {
+                //     safeSerial.printf("I will take the token, fine %d\r\n", me->lostTokenReminder);
+                //     me->status = 1;
+                // }
+            }
+        }
+        else
+        {
+            // they are not handing off the token, because someone else has it.
+            // and that othe person is not me
+        }
+    }
+    else if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
+    {
+        // they are not handing off the token and who they think has it is the broadcast address (or not us)
+        safeSerial.printf("%s does not have the token and does not know who does\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+    }
+
+    // if (globalState.lastNowMessage.update_status == 1)
+    // {
+    //     auto nodeWithToken = globalState.nodes.GetNextReady(1);
+    //     if (memcmp(nodeWithToken->macAddress, globalState.lastNowMessage.update_MacAddress, 6) == 0)
+    //     {
+    //         // safeSerial.printf("Token refresh at %s\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+    //     }
+    //     else if (memcmp(mac, globalState.lastNowMessage.update_MacAddress, 6) == 0)
+    //     {
+    //         safeSerial.printf("Token affirmation from %s\r\n", convertMacAddressToString(mac));
+    //     }
+    //     else
+    //     {
+    //         safeSerial.printf("Token hand off from %s to %s\r\n", convertMacAddressToString(mac), convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+    //     }
+    // }
+    // else
+    // {
+    //     safeSerial.printf("??? Token hand off from %s to %s with status:%d\r\n", convertMacAddressToString(mac), convertMacAddressToString(globalState.lastNowMessage.update_MacAddress), globalState.lastNowMessage.update_status);
+    // }
+
+    // Serial.printf("bmt command received: %s\r\n", globalState.lastNowMessage.action);
     globalState.lastNowMessageReady = true;
 }
 
 void onDataSent(const uint8_t *mac, esp_now_send_status_t status)
 {
+    return;
     Serial.print(status == ESP_NOW_SEND_SUCCESS ? "Message sent successfully: " : "Message failed to send to: ");
 
     for (int i = 0; i < 6; i++)
@@ -153,7 +261,7 @@ void wiFiBegin()
         // Serial.printf("Connected to WiFi: %s\n", WiFi.SSID().c_str());
     }
 
-    Serial.printf("\nWiFi Connected %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+    Serial.printf("\nWiFi Connected %s, %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
 
     WiFiUDP ntpUDP;
     NTPClient *timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60 * 60 * 1000);
@@ -164,17 +272,17 @@ void wiFiBegin()
     Serial.print("Current time: ");
     Serial.println(timeClient->getFormattedTime());
 
-    // Print MAC address
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    Serial.print("MAC Address: ");
-    for (int i = 0; i < 6; i++)
-    {
-        Serial.printf("%02X", mac[i]);
-        if (i < 5)
-            Serial.print(":");
-    }
-    Serial.println();
+    // // Print MAC address
+    // uint8_t mac[6];
+    // WiFi.macAddress(mac);
+    // Serial.print("MAC Address: ");
+    // for (int i = 0; i < 6; i++)
+    // {
+    //     Serial.printf("%02X", mac[i]);
+    //     if (i < 5)
+    //         Serial.print(":");
+    // }
+    // Serial.println();
 
     {
         if (esp_now_init() != ESP_OK)
@@ -193,6 +301,13 @@ void wiFiBegin()
             registerEspNowPeer();
         }
     }
+}
+
+char *convertMacAddressToString(const uint8_t mac[6])
+{
+    char *macString = new char[18];
+    sprintf(macString, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return macString;
 }
 
 void registerEspNowPeer()
@@ -654,11 +769,67 @@ void setupServer()
 }
 
 struct_message lastNowMessage;
+
+bool sendEspNodeUpdate(Node *node)
+{
+    return sendEspNodeUpdate(node, nullptr);
+}
+
+bool sendEspNodeUpdate(Node *node, Node *nodeWithToken)
+{
+
+    uint8_t dest[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    uint8_t macAddr[6];
+    auto xx = WiFi.macAddress(macAddr);
+    // 4C:11:AE:73:F1:4C
+
+    memcpy(dest, broadcastAddress, 6);
+
+    memcpy(lastNowMessage.update_MacAddress, node->macAddress, 6);
+    lastNowMessage.update_status = node->status;
+
+    if (nodeWithToken != nullptr)
+    {
+        memcpy(lastNowMessage.tokenHolder_MacAddress, nodeWithToken->macAddress, 6);
+    }
+    else
+    {
+        // just "clear" with broadcast
+        memcpy(lastNowMessage.tokenHolder_MacAddress, broadcastAddress, 6);
+    }
+
+    strcpy(lastNowMessage.action, ("from:" + WiFi.localIP().toString()).c_str());
+
+    // Serial.printf("Sending [%s]\n", lastNowMessage.action);
+
+    esp_err_t result = esp_now_send(dest, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
+    // esp_err_t result = esp_now_send(ownMac, (uint8_t *) &myData, sizeof(myData));
+
+    if (result == ESP_OK)
+    {
+        // Serial.printf("Sent %s with success\n", lastNowMessage.action);
+        return true;
+    }
+    else
+    {
+        Serial.printf("Error sending [%s]\n", lastNowMessage.action);
+        Serial.println(esp_err_to_name(result));
+        return false;
+    }
+}
+
 bool sendEspNowAction(const char *action)
 {
 
     uint8_t dest[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    uint8_t macAddr[6];
+    auto xx = WiFi.macAddress(macAddr);
+    // 4C:11:AE:73:F1:4C
+
     memcpy(dest, broadcastAddress, 6);
     // getPeer(dest);
 
@@ -674,7 +845,7 @@ bool sendEspNowAction(const char *action)
 
     strcpy(lastNowMessage.action, ("from:" + WiFi.localIP().toString()).c_str());
 
-    Serial.printf("Sending [%s]\n", lastNowMessage.action);
+    // Serial.printf("Sending [%s]\n", lastNowMessage.action);
 
     esp_err_t result = esp_now_send(dest, (uint8_t *)&lastNowMessage, sizeof(lastNowMessage));
     // esp_err_t result = esp_now_send(ownMac, (uint8_t *) &myData, sizeof(myData));
