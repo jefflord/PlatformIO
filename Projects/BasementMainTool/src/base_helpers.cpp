@@ -27,10 +27,10 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 
     OnDataRecvCounter++;
 
-    if (OnDataRecvCounter % 100 == 0)
-    {
-        safeSerial.printf("OnDataRecvCounter: %d\r\n", OnDataRecvCounter);
-    }
+    // if (OnDataRecvCounter % 100 == 0)
+    // {
+    //     safeSerial.printf("OnDataRecvCounter: %d\r\n", OnDataRecvCounter);
+    // }
 
     /*
         globalState.lastNowMessage.update_MacAddress: the mac address of the node that CHANGING token status
