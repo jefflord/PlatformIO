@@ -10,8 +10,10 @@ AsyncWebServer server(8222);
 #define ld2450_01_TX 25
 #define ld2450_01_RX 26
 
+#ifdef DXSENSOR_NODE
 LD2450 ld2450_01;
 LD2450 ld2450_02;
+#endif
 
 extern GlobalState globalState;
 extern ThreadSafeSerial safeSerial;
@@ -24,6 +26,12 @@ int OnDataRecvCounter = 0;
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+
+    if (!globalState.isNode)
+    {
+        safeSerial.println("I am not a node, I will not process this message");
+        return;
+    }
 
     OnDataRecvCounter++;
 
@@ -93,7 +101,13 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 
     // safeSerial.println("A!");
     //  check to see if broadcastAddress is the same as globalState.lastNowMessage.tokenHolder_MacAddress
-    if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) != 0)
+
+    if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
+    {
+        // they are not handing off the token and who they think has it is the broadcast address (or not us)
+        safeSerial.printf("%s does not have the token and does not know who does!!!\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
+    }
+    else if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) != 0)
     {
         // if this is not saying who the token is for, then we need to check to see who they think has the token, maybe it's us!
         if (memcmp(globalState.macAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
@@ -106,7 +120,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 auto timeSinceLastWork = millis() - me->lastWorkTime;
                 if (timeSinceLastWork > 1000)
                 {
-                    safeSerial.printf("Last work %ld ms ago, I will take the token yet. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
+                    safeSerial.printf("Last work %ld ms ago, I will take the token. (status:%d)\r\n", timeSinceLastWork, globalState.lastNowMessage.update_status);
                     me->status = 1;
                 }
                 else
@@ -115,11 +129,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
                 }
             }
         }
-    }
-    else if (globalState.lastNowMessage.update_status == 0 && memcmp(broadcastAddress, globalState.lastNowMessage.tokenHolder_MacAddress, 6) == 0)
-    {
-        // they are not handing off the token and who they think has it is the broadcast address (or not us)
-        safeSerial.printf("%s does not have the token and does not know who does!!!\r\n", convertMacAddressToString(globalState.lastNowMessage.update_MacAddress));
     }
 
     // Serial.printf("bmt command received: %s\r\n", globalState.lastNowMessage.action);
@@ -235,22 +244,20 @@ void wiFiBegin()
     // }
     // Serial.println();
 
+    if (esp_now_init() != ESP_OK)
     {
-        if (esp_now_init() != ESP_OK)
-        {
-            Serial.println("Error initializing ESP-NOW");
-            return;
-        }
-        else
-        {
-            Serial.println("ESP-NOW ready");
+        Serial.println("Error initializing ESP-NOW");
+        return;
+    }
+    else
+    {
+        Serial.println("ESP-NOW ready");
 
-            // Register callback
-            esp_now_register_recv_cb(OnDataRecv);
-            esp_now_register_send_cb(onDataSent);
+        // Register callback
+        esp_now_register_recv_cb(OnDataRecv);
+        esp_now_register_send_cb(onDataSent);
 
-            registerEspNowPeer();
-        }
+        registerEspNowPeer();
     }
 }
 
@@ -367,6 +374,14 @@ OTAStatus *MySetupOTA()
 
 void mDNSSetup(void *p)
 {
+    auto myDnsName = (char *)p;
+
+    if (myDnsName == NULL)
+    {
+        static char defaultName[] = "bmtool";
+        myDnsName = defaultName;
+    }
+
     auto waitTimeout = millis() + 100;
     // Serial.println("MDNS setup waiting start");
     while (waitTimeout > millis() || WiFi.status() != WL_CONNECTED)
@@ -376,25 +391,20 @@ void mDNSSetup(void *p)
     }
     // Serial.println("MDNS setup waiting done");
 
-    if (!MDNS.begin("basementtool"))
+    if (!MDNS.begin(myDnsName))
     {
-        Serial.println("Error setting up MDNS responder!");
+        Serial.printf("Error setting up MDNS responder for %s.local\r\n", myDnsName);
     }
     else
     {
-        Serial.println("Device can be accessed at basementtool.local");
-        // vTaskDelay(pdMS_TO_TICKS(100));
-        //  if (MDNS.addService("http", "tcp", 80))
-        //  {
-        //    Serial.println("addService 1 worked");
-        //  }
-
+        Serial.printf("Device can be accessed at %s.local\r\n", myDnsName);
         dnsReady = true;
         vTaskDelete(NULL);
     }
 }
 
-void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+#ifdef DXSENSOR_NODE
+void handleJsonPost_Node(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
     Serial.println("json!");
 
@@ -542,6 +552,14 @@ void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 
     // Send the response
     request->send(response);
+}
+#endif
+void handleJsonPost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+
+#ifdef DXSENSOR_NODE
+    handleJsonPost_Node(request, data, len, index, total);
+#endif
 }
 
 void handlePostXHtml(AsyncWebServerRequest *request)

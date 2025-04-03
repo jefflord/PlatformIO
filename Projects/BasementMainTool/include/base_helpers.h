@@ -6,7 +6,10 @@
 #include <WiFi.h>
 #include <NTPClient.h>
 #include <ESPmDNS.h>
+
+#ifdef DXSENSOR_NODE
 #include <LD2450.h>
+#endif
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <esp_now.h>
@@ -33,6 +36,7 @@ typedef struct struct_message
 
 struct GlobalState
 {
+    bool isNode;
     NodeList nodes;
     bool sensorInit;
     bool sensorOn;
