@@ -383,8 +383,20 @@ void readSensor(void *p)
   }
 }
 
+static unsigned long lastTimeCheck = 0;
+
 void loop()
 {
+
+  if (millis() - lastTimeCheck > 1000)
+  {
+    lastTimeCheck = millis();
+    if (doWiFi)
+    {
+      timeClient->update();
+      Serial.println(timeClient->getFormattedTime() + " " + String(lastReading));
+    }
+  }
 
   if (ArduinoOTARunning)
   {
