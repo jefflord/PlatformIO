@@ -9,6 +9,7 @@
 #include <esp_now.h>
 
 HardwareSerial RadarSerial(1);
+WiFiUDP ntpUDP;
 
 #define LED_PIN 2
 #define LED_PIN_OFF LOW
@@ -223,7 +224,7 @@ void SetupOTA()
 }
 
 int lastReading = -1;
-int lastChangeMs = -1;
+unsigned long lastChangeMs = 0;
 unsigned long long loopCounter = 0;
 
 void readSensor(void *p)
@@ -385,8 +386,67 @@ void readSensor(void *p)
 
 static unsigned long lastTimeCheck = 0;
 
+static bool forceAlwaysUseWiFiBackup = true;
+
+static bool bootButtonPressDetected()
+{
+  // GPIO0 can be held low by the serial adapter during a DTR reset. Do not arm
+  // the button until it has been stably released, then report one event per press.
+  static int lastReading = HIGH;
+  static int stableReading = HIGH;
+  static unsigned long lastTransitionMs = 0;
+  static bool armed = false;
+
+  const int reading = digitalRead(BOOT_BUTTON_PIN);
+  const unsigned long now = millis();
+  if (reading != lastReading)
+  {
+    lastReading = reading;
+    lastTransitionMs = now;
+  }
+
+  if (now - lastTransitionMs < 50)
+  {
+    return false;
+  }
+
+  if (reading != stableReading)
+  {
+    stableReading = reading;
+    if (stableReading == HIGH)
+    {
+      armed = true;
+    }
+    else if (armed)
+    {
+      armed = false;
+      return true;
+    }
+  }
+  else if (stableReading == HIGH)
+  {
+    // Arm on the first stable release after startup.
+    armed = true;
+  }
+
+  return false;
+}
+
 void loop()
 {
+
+  if (doWiFi)
+  {
+    wiFiBegin();
+    ArduinoOTA.handle();
+  }
+
+  // Give OTA handling priority over periodic, sensor, and HTTP work.
+  if (ArduinoOTARunning)
+  {
+    delay(1);
+    return;
+  }
 
   if (millis() - lastTimeCheck > 1000)
   {
@@ -394,28 +454,27 @@ void loop()
     if (doWiFi)
     {
       timeClient->update();
-      Serial.println(timeClient->getFormattedTime() + " " + String(lastReading));
+      Serial.printf("%s presence detected: %s\n",
+                    timeClient->getFormattedTime().c_str(),
+                    lastReading == HIGH ? "yes" : "no");
     }
-  }
-
-  if (ArduinoOTARunning)
-  {
-    delay(1);
-    return;
   }
 
   auto ld2450Val = digitalRead(LD2450C_PIN);
 
   if (lastReading != ld2450Val)
   {
-    auto diff = ((millis() - lastChangeMs)) / 1000.0;
-    Serial.printf("\nld2450Val %d, (%ld)\n", ld2450Val, diff);
-    lastChangeMs = millis();
+    const unsigned long currentMillis = millis();
+    const float secondsSinceLastChange = (currentMillis - lastChangeMs) / 1000.0f;
+    Serial.printf("\npresence detected: %s (%.1f seconds since last change)\n",
+                  ld2450Val == HIGH ? "yes" : "no",
+                  secondsSinceLastChange);
+    lastChangeMs = currentMillis;
 
     if (ld2450Val == 1)
     {
       digitalWrite(LED_PIN, LED_PIN_ON);
-      if (!sendEspNowAction("on"))
+      if (!sendEspNowAction("on") || forceAlwaysUseWiFiBackup)
       {
         sendToggleAction("light_on");
       }
@@ -423,7 +482,7 @@ void loop()
     else
     {
       digitalWrite(LED_PIN, LED_PIN_OFF);
-      if (!sendEspNowAction("off"))
+      if (!sendEspNowAction("off") || forceAlwaysUseWiFiBackup)
       {
         sendToggleAction("light_off");
       }
@@ -432,32 +491,25 @@ void loop()
 
   lastReading = ld2450Val;
 
-  if (doWiFi)
-  {
-    wiFiBegin();
-    ArduinoOTA.handle();
-  }
-
   auto touchReadValue = touchRead(TOUCH_PIN);
   if (touchReadValue > 0 && touchReadValue < 40)
   {
-    Serial.printf("touch %d, light_toggle\n", touchReadValue);
     // take a second reading
     delay(16);
     touchReadValue = touchRead(TOUCH_PIN);
     if (touchReadValue > 0 && touchReadValue < 40)
     {
-      Serial.printf("touch %d, light_toggle\n", touchReadValue);
+      Serial.printf("Manual light state change requested: light_toggle (touch input, reading %d)\n", touchReadValue);
       sendToggleAction("light_toggle");
     }
     else
     {
-      Serial.printf("SECOND touch %d, light_toggle\n", touchReadValue);
+      Serial.printf("Touch input not confirmed (reading %d)\n", touchReadValue);
     }
   }
-  else if (digitalRead(BOOT_BUTTON_PIN) == LOW)
+  else if (bootButtonPressDetected())
   {
-    Serial.printf("touch boot pin, light_toggle\n");
+    Serial.println("Manual light state change requested: light_toggle (BOOT button)");
     sendToggleAction("light_toggle");
   }
 
@@ -466,14 +518,17 @@ void loop()
 
     if (strcmp(lastNowMessage.action, "tog") == 0)
     {
+      Serial.println("Manual light state change requested: light_toggle (ESP-NOW)");
       sendToggleAction("light_toggle");
     }
     else if (strcmp(lastNowMessage.action, "on") == 0)
     {
+      Serial.println("Manual light state change requested: light_on (ESP-NOW)");
       sendToggleAction("light_on");
     }
     else if (strcmp(lastNowMessage.action, "off") == 0)
     {
+      Serial.println("Manual light state change requested: light_off (ESP-NOW)");
       sendToggleAction("light_off");
     }
     else
@@ -604,7 +659,6 @@ void wiFiBegin()
 
   Serial.printf("\nWiFi Connected %s, %s, %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
 
-  WiFiUDP ntpUDP;
   timeClient = new NTPClient(ntpUDP, "pool.ntp.org", 0, 60 * 60 * 1000);
   timeClient->begin();
 
