@@ -17,8 +17,7 @@ WiFiUDP ntpUDP;
 #define readSensorSerial false
 
 #define TOUCH_PIN 12
-// NOTE, I think it's really a LD2410C not a "LD2450C", there is no such thing as a "LD2450C"?
-#define LD2450C_PIN 23 // D23
+#define LD2410C_PIN 23 // D23, LD2410C OUT
 #define BOOT_BUTTON_PIN 0
 
 const bool doWiFi = true;
@@ -110,7 +109,7 @@ void setup()
 
   pinMode(LED_PIN, OUTPUT);
   pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(LD2450C_PIN, INPUT);
+      pinMode(LD2410C_PIN, INPUT);
 
   digitalWrite(LED_PIN, LED_PIN_OFF);
 
@@ -190,7 +189,7 @@ void SetupOTA()
                            type = "filesystem";
                          }
 
-                         Serial.println("OTA Update Starting: " + type);
+                          Serial.println("OTA Update Starting (password accepted): " + type);
 
                          ArduinoOTARunning = true; });
   ArduinoOTA.onEnd([]()
@@ -220,6 +219,7 @@ void SetupOTA()
             Serial.println("End Failed");
         } });
 
+  ArduinoOTA.setPassword("desktool-update");
   ArduinoOTA.begin();
 }
 
@@ -343,7 +343,7 @@ void readSensor(void *p)
                     }
                     else if (targetStatus == 1)
                     {
-                      Serial.printf("targetStatus:  Campaign target\n");
+                      Serial.printf("targetStatus:  Moving target\n");
                     }
                     else if (targetStatus == 2)
                     {
@@ -351,7 +351,7 @@ void readSensor(void *p)
                     }
                     else if (targetStatus == 3)
                     {
-                      Serial.printf("targetStatus:  Campaign & Stationary target\n");
+                      Serial.printf("targetStatus:  Moving & stationary target\n");
                     }
 
                     // Serial.printf("moving target (cm/engery): %d / %d\n", movementTargetDistance, exerciseTargetEnergy);
@@ -460,18 +460,18 @@ void loop()
     }
   }
 
-  auto ld2450Val = digitalRead(LD2450C_PIN);
+  auto ld2410cVal = digitalRead(LD2410C_PIN);
 
-  if (lastReading != ld2450Val)
+  if (lastReading != ld2410cVal)
   {
     const unsigned long currentMillis = millis();
     const float secondsSinceLastChange = (currentMillis - lastChangeMs) / 1000.0f;
     Serial.printf("\npresence detected: %s (%.1f seconds since last change)\n",
-                  ld2450Val == HIGH ? "yes" : "no",
+                  ld2410cVal == HIGH ? "yes" : "no",
                   secondsSinceLastChange);
     lastChangeMs = currentMillis;
 
-    if (ld2450Val == 1)
+    if (ld2410cVal == 1)
     {
       digitalWrite(LED_PIN, LED_PIN_ON);
       if (!sendEspNowAction("on") || forceAlwaysUseWiFiBackup)
@@ -489,7 +489,7 @@ void loop()
     }
   }
 
-  lastReading = ld2450Val;
+  lastReading = ld2410cVal;
 
   auto touchReadValue = touchRead(TOUCH_PIN);
   if (touchReadValue > 0 && touchReadValue < 40)

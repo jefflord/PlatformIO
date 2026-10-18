@@ -16,7 +16,7 @@ ESP-NOW and a local HTTP endpoint.
   light controller.
 - Connects to Wi-Fi, starts an mDNS responder at `desktool.local`, synchronizes
   time with `pool.ntp.org`, and initializes ArduinoOTA.
-- Contains an optional UART radar-frame reader on UART1 (RX GPIO 16, TX GPIO
+- Contains an optional LD2410C UART data reader on UART1 (RX GPIO 16, TX GPIO
   17, 256000 baud). It is disabled by default in the source.
 
 ## Hardware connections
@@ -26,12 +26,12 @@ ESP-NOW and a local HTTP endpoint.
 | GPIO 2 | Onboard/status LED output |
 | GPIO 0 | BOOT button input (active low; debounced, armed after release at startup) |
 | GPIO 12 | Capacitive touch input |
-| GPIO 23 | Digital detection input (`LD2450C_PIN` in the source) |
+| GPIO 23 | LD2410C digital OUT / presence input (`LD2410C_PIN` in the source) |
 | GPIO 16 / 17 | Optional UART1 RX / TX for the radar sensor |
 
-The source comments indicate that the exact radar model should be confirmed.
-The active detection logic currently reads GPIO 23 as a digital input; the
-UART frame reader is separately controlled by `readSensorSerial`.
+The active light-control logic currently reads the LD2410C's digital OUT signal
+on GPIO 23. The optional UART reader is controlled by `readSensorSerial`; it
+parses and logs target data, but does not currently affect light behavior.
 
 ## Build and upload
 
@@ -54,8 +54,17 @@ The `esp32dev-ota` environment uploads over Wi-Fi to the mDNS hostname
 and ESP32 must be on a network where that mDNS name resolves. The serial monitor
 uses 115200 baud, as set by `Serial.begin()` in the firmware.
 
-PlatformIO installs the configured libraries, including NTPClient and
-HLK-LD2450, when building the project.
+The OTA password is `desktool-update`, configured in both `src/main.cpp` and
+`platformio.ini`. It is intentionally committed as an extra check against
+accidentally updating a different password-protected device, not as a security
+secret. Anyone with the repository can read it, and OTA traffic is not
+encrypted. The hostname remains the primary target selector; an OTA-enabled
+device with no password may still accept an upload without challenging for the
+configured password, so this is not a guarantee of device identity.
+
+PlatformIO installs NTPClient when building the project. The LD2410C UART
+reader in `src/main.cpp` parses the sensor's basic target frames directly; the
+project does not use an LD2450 library.
 
 ## Network and light-controller setup
 
