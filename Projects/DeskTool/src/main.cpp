@@ -2,14 +2,17 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <WiFi.h>
+#include <WebServer.h>
 #include <NTPClient.h>
 #include <HTTPClient.h>
 #include <HardwareSerial.h>
 #include <ESPmDNS.h>
 #include <esp_now.h>
+#include <esp_system.h>
 
 HardwareSerial RadarSerial(1);
 WiFiUDP ntpUDP;
+WebServer diagnosticsServer(80);
 
 #define LED_PIN 2
 #define LED_PIN_OFF LOW
@@ -21,13 +24,25 @@ WiFiUDP ntpUDP;
 #define BOOT_BUTTON_PIN 0
 
 const bool doWiFi = true;
-bool dnsReady = false;
+volatile bool dnsReady = false;
 NTPClient *timeClient;
+bool diagnosticsServerStarted = false;
+bool espNowReady = false;
+esp_reset_reason_t bootResetReason = ESP_RST_UNKNOWN;
+volatile uint32_t wifiDisconnectCount = 0;
+volatile uint32_t wifiIpAcquisitionCount = 0;
+volatile uint8_t lastWiFiDisconnectReason = 0;
+volatile unsigned long lastWiFiDisconnectMs = 0;
+volatile unsigned long lastWiFiGotIpMs = 0;
 
 void wiFiBegin();
 void readSensor(void *p);
 void sendToggleAction(String action);
 bool sendEspNowAction(const char *action);
+void configureDiagnosticsServer();
+void startDiagnosticsServerIfConnected();
+void handleDiagnosticsPage();
+void onWiFiEvent(arduino_event_id_t event, arduino_event_info_t info);
 
 void mDNSSetup(void *p)
 {
@@ -46,15 +61,197 @@ void mDNSSetup(void *p)
   }
   else
   {
+    MDNS.addService("http", "tcp", 80);
     Serial.println("Device can be accessed at desktool.local");
-    // vTaskDelay(pdMS_TO_TICKS(100));
-    //  if (MDNS.addService("http", "tcp", 80))
-    //  {
-    //    Serial.println("addService 1 worked");
-    //  }
 
     dnsReady = true;
     vTaskDelete(NULL);
+  }
+}
+
+const char *resetReasonName(esp_reset_reason_t reason)
+{
+  switch (reason)
+  {
+  case ESP_RST_POWERON:
+    return "Power-on";
+  case ESP_RST_EXT:
+    return "External reset";
+  case ESP_RST_SW:
+    return "Software reset";
+  case ESP_RST_PANIC:
+    return "Panic / exception";
+  case ESP_RST_INT_WDT:
+    return "Interrupt watchdog";
+  case ESP_RST_TASK_WDT:
+    return "Task watchdog";
+  case ESP_RST_WDT:
+    return "Watchdog";
+  case ESP_RST_DEEPSLEEP:
+    return "Deep sleep wake";
+  case ESP_RST_BROWNOUT:
+    return "Brownout";
+  case ESP_RST_SDIO:
+    return "SDIO reset";
+  default:
+    return "Unknown";
+  }
+}
+
+const char *wifiStatusName(wl_status_t status)
+{
+  switch (status)
+  {
+  case WL_IDLE_STATUS:
+    return "Idle";
+  case WL_NO_SSID_AVAIL:
+    return "SSID unavailable";
+  case WL_SCAN_COMPLETED:
+    return "Scan complete";
+  case WL_CONNECTED:
+    return "Connected";
+  case WL_CONNECT_FAILED:
+    return "Connection failed";
+  case WL_CONNECTION_LOST:
+    return "Connection lost";
+  case WL_DISCONNECTED:
+    return "Disconnected";
+  case WL_NO_SHIELD:
+    return "Wi-Fi unavailable";
+  default:
+    return "Unknown";
+  }
+}
+
+String formatUptime(unsigned long seconds)
+{
+  char buffer[48];
+  const unsigned long days = seconds / 86400UL;
+  const unsigned long hours = (seconds / 3600UL) % 24UL;
+  const unsigned long minutes = (seconds / 60UL) % 60UL;
+  const unsigned long remainingSeconds = seconds % 60UL;
+  snprintf(buffer, sizeof(buffer), "%lu d %02lu:%02lu:%02lu", days, hours, minutes, remainingSeconds);
+  return String(buffer);
+}
+
+String htmlEscape(const String &value)
+{
+  String escaped;
+  escaped.reserve(value.length() + 8);
+  for (size_t i = 0; i < value.length(); i++)
+  {
+    switch (value[i])
+    {
+    case '&':
+      escaped += F("&amp;");
+      break;
+    case '<':
+      escaped += F("&lt;");
+      break;
+    case '>':
+      escaped += F("&gt;");
+      break;
+    case '"':
+      escaped += F("&quot;");
+      break;
+    case '\'':
+      escaped += F("&#39;");
+      break;
+    default:
+      escaped += value[i];
+      break;
+    }
+  }
+  return escaped;
+}
+
+void appendDiagnosticsRow(String &page, const char *label, const String &value)
+{
+  page += F("<tr><th scope=\"row\">");
+  page += label;
+  page += F("</th><td>");
+  page += htmlEscape(value);
+  page += F("</td></tr>");
+}
+
+void handleDiagnosticsPage()
+{
+  const wl_status_t wifiStatus = WiFi.status();
+  const bool connected = wifiStatus == WL_CONNECTED;
+  const uint32_t disconnects = wifiDisconnectCount;
+  const uint32_t ipAcquisitions = wifiIpAcquisitionCount;
+  const uint8_t disconnectReason = lastWiFiDisconnectReason;
+  const unsigned long disconnectMs = lastWiFiDisconnectMs;
+  const unsigned long gotIpMs = lastWiFiGotIpMs;
+
+  String page;
+  page.reserve(3072);
+  page += F("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">");
+  page += F("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  page += F("<meta http-equiv=\"refresh\" content=\"5\"><title>DeskTool diagnostics</title>");
+  page += F("<style>body{font:16px system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#222}h1{margin-bottom:.2rem}p{color:#555}table{width:100%;border-collapse:collapse;margin-top:1rem}th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid #ddd;overflow-wrap:anywhere}th{width:38%;background:#f5f5f5}</style>");
+  page += F("</head><body><h1>DeskTool diagnostics</h1><p>Auto-refreshes every 5 seconds. Build: ");
+  page += __DATE__;
+  page += ' ';
+  page += __TIME__;
+  page += F("</p><table><tbody>");
+
+  appendDiagnosticsRow(page, "Uptime", formatUptime(millis() / 1000UL));
+  appendDiagnosticsRow(page, "Reset reason", String(resetReasonName(bootResetReason)) + " (" + String(static_cast<int>(bootResetReason)) + ")");
+  appendDiagnosticsRow(page, "Chip", String(ESP.getChipModel()) + " rev " + String(ESP.getChipRevision()));
+  appendDiagnosticsRow(page, "Arduino-ESP32 / ESP-IDF", String(ESP.getSdkVersion()));
+  appendDiagnosticsRow(page, "CPU frequency", String(ESP.getCpuFreqMHz()) + " MHz");
+  appendDiagnosticsRow(page, "Free heap", String(ESP.getFreeHeap()) + " bytes");
+  appendDiagnosticsRow(page, "Minimum free heap since boot", String(ESP.getMinFreeHeap()) + " bytes");
+  appendDiagnosticsRow(page, "Wi-Fi status", wifiStatusName(wifiStatus));
+  appendDiagnosticsRow(page, "Wi-Fi SSID", connected ? WiFi.SSID() : String("not connected"));
+  appendDiagnosticsRow(page, "IP address", WiFi.localIP().toString());
+  appendDiagnosticsRow(page, "Signal strength", connected ? String(WiFi.RSSI()) + " dBm" : String("n/a"));
+  appendDiagnosticsRow(page, "Wi-Fi channel", connected ? String(WiFi.channel()) : String("n/a"));
+  appendDiagnosticsRow(page, "MAC address", WiFi.macAddress());
+  appendDiagnosticsRow(page, "Wi-Fi IP acquisitions", String(ipAcquisitions));
+  appendDiagnosticsRow(page, "Wi-Fi disconnect events", String(disconnects));
+  appendDiagnosticsRow(page, "Last disconnect reason code", disconnects ? String(disconnectReason) : String("none"));
+  appendDiagnosticsRow(page, "Last disconnect", disconnects ? formatUptime((millis() - disconnectMs) / 1000UL) + " ago" : String("never"));
+  appendDiagnosticsRow(page, "Last IP acquisition", ipAcquisitions ? formatUptime((millis() - gotIpMs) / 1000UL) + " ago" : String("never"));
+  appendDiagnosticsRow(page, "DeskTool mDNS", dnsReady ? String("started") : String("not started"));
+  appendDiagnosticsRow(page, "ESP-NOW", espNowReady ? String("initialized") : String("not initialized"));
+  appendDiagnosticsRow(page, "Presence input GPIO 23", digitalRead(LD2410C_PIN) == HIGH ? String("HIGH") : String("LOW"));
+  appendDiagnosticsRow(page, "NTP time", timeClient != nullptr ? timeClient->getFormattedTime() : String("not initialized"));
+
+  page += F("</tbody></table><p>Open this page at <code>http://desktool.local/</code> or use the IP shown above.</p></body></html>");
+  diagnosticsServer.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  diagnosticsServer.send(200, "text/html; charset=utf-8", page);
+}
+
+void configureDiagnosticsServer()
+{
+  diagnosticsServer.on("/", HTTP_GET, handleDiagnosticsPage);
+  diagnosticsServer.on("/diag", HTTP_GET, handleDiagnosticsPage);
+}
+
+void startDiagnosticsServerIfConnected()
+{
+  if (!diagnosticsServerStarted && WiFi.status() == WL_CONNECTED)
+  {
+    diagnosticsServer.begin();
+    diagnosticsServerStarted = true;
+    Serial.printf("Diagnostics page: http://%s/\n", WiFi.localIP().toString().c_str());
+  }
+}
+
+void onWiFiEvent(arduino_event_id_t event, arduino_event_info_t info)
+{
+  if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED)
+  {
+    lastWiFiDisconnectReason = info.wifi_sta_disconnected.reason;
+    lastWiFiDisconnectMs = millis();
+    wifiDisconnectCount++;
+  }
+  else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP)
+  {
+    lastWiFiGotIpMs = millis();
+    wifiIpAcquisitionCount++;
   }
 }
 
@@ -99,6 +296,10 @@ bool ArduinoOTARunning = false;
 void setup()
 {
   Serial.begin(115200);
+  bootResetReason = esp_reset_reason();
+  Serial.printf("Reset reason: %s (%d)\n", resetReasonName(bootResetReason), static_cast<int>(bootResetReason));
+  configureDiagnosticsServer();
+  WiFi.onEvent(onWiFiEvent);
 
   // The default baud rate of the serial port is
   // 256000, with 1 stop bit and no parity bit.
@@ -125,6 +326,7 @@ void setup()
     xTaskCreate(mDNSSetup, "mDNSSetup", 1024 * 2, NULL, 1, NULL);
 
     SetupOTA();
+    startDiagnosticsServerIfConnected();
 
     WiFi.mode(WIFI_STA);
     Serial.println("Setup with OTA done.");
@@ -137,6 +339,7 @@ void setup()
     else
     {
       Serial.println("ESP-NOW ready");
+      espNowReady = true;
       registerEspNowPeer();
 
       // Register callback
@@ -438,6 +641,11 @@ void loop()
   if (doWiFi)
   {
     wiFiBegin();
+    startDiagnosticsServerIfConnected();
+    if (diagnosticsServerStarted)
+    {
+      diagnosticsServer.handleClient();
+    }
     ArduinoOTA.handle();
   }
 

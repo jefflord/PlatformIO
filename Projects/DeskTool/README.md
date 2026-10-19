@@ -16,6 +16,9 @@ ESP-NOW and a local HTTP endpoint.
   light controller.
 - Connects to Wi-Fi, starts an mDNS responder at `desktool.local`, synchronizes
   time with `pool.ntp.org`, and initializes ArduinoOTA.
+- Serves a local diagnostics page at `http://desktool.local/` (also `/diag`) with
+  reset reason, uptime, build/SDK details, heap, Wi-Fi status and signal, and
+  Wi-Fi disconnect/IP-acquisition counts.
 - Contains an optional LD2410C UART data reader on UART1 (RX GPIO 16, TX GPIO
   17, 256000 baud). It is disabled by default in the source.
 
@@ -53,6 +56,11 @@ The `esp32dev-ota` environment uploads over Wi-Fi to the mDNS hostname
 `desktool.local`; it does not rely on a fixed IP address. For OTA, the computer
 and ESP32 must be on a network where that mDNS name resolves. The serial monitor
 uses 115200 baud, as set by `Serial.begin()` in the firmware.
+
+After the ESP32 joins Wi-Fi, open `http://desktool.local/` to view diagnostics.
+The page refreshes every five seconds; it also displays the device IP, so the
+page can be opened by IP if mDNS is unavailable. The page is served on the local
+network without authentication.
 
 The OTA password is `desktool-update`, configured in both `src/main.cpp` and
 `platformio.ini`. It is intentionally committed as an extra check against
